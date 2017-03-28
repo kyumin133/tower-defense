@@ -1,0 +1,1700 @@
+<!doctype html>
+  <html>
+  <head>
+    <meta charset="ISO-8859-1" />
+    <title> Tower Defense </title>
+  </head>
+  <body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<!--    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>-->
+    <script>
+      (function() {
+        var lastTime = 0;
+        var vendors = ['ms', 'moz', 'webkit', 'o'];
+        for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+          window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+          window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame']
+                                     || window[vendors[x]+'CancelRequestAnimationFrame'];
+        }
+
+        if (!window.requestAnimationFrame)
+          window.requestAnimationFrame = function(callback, element) {
+              var currTime = new Date().getTime();
+              var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+              var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+                timeToCall);
+              lastTime = currTime + timeToCall;
+              return id;
+          };
+
+        if (!window.cancelAnimationFrame)
+          window.cancelAnimationFrame = function(id) {
+              clearTimeout(id);
+          };
+      }());
+
+      //var minions = [];
+      var svg_url = "http://www.w3.org/2000/svg";
+      var xlink_url = "http://www.w3.org/1999/xlink";
+      var offset;
+      var max_minions = 1;
+      //var num_minions = 2;
+      var projectile_speed = 7;
+      var live_minions;
+      var trans_count;
+      var fps = 60;
+      var int = 1000/fps; //ms per frame
+      var start_time = 0;
+      var path;
+      //var path_array = ["5 0", "5 4", "3 4", "3 11", "8 11", "8 3", "16 3", "16 6", "11 6", "11 9", "20 9"];
+      var path_array = ["180 0", "180 140", "100 140", "100 420", "300 420", "300 100", "620 100", "620 220", "420 220", "420 340", "800 340"]; //draw path
+      var path_len;
+      var path_start;
+      var minionQueue = [];
+      var missileQueue = [];
+      var towerQueue = [];
+      var frame = 0;
+      var test = path_len * int / (1000 * 20);
+      var grid_increment = 40;
+      var grid;
+      var grid_array = [];
+      var grid_height;
+      var grid_width;
+      var slow_duration = 30;
+      var medium_duration = 20;
+      var fast_duration = 15;
+      var requestID;
+      var selectedTower;
+      var selectedPriority;
+      var selectedMinion;
+      var playing = false;
+      var building = false;
+      var game_over = false;
+      var building_type = "Arrow";
+      var types = ["Arrow", "Ice", "Cannon"];
+      var Arrow_index = 0;
+      var Ice_index = 1;
+      var Cannon_index = 2;
+      var Assassin_index = 3;
+      var tower_damage = [[30, 60, 120, 240, 480], [40, 80, 160, 320, 640], [100, 200, 400, 800, 1600], [10, 20, 40, 80, 160]];
+      var tower_range = [[120, 140, 160, 180, 200], [100, 120, 140, 160, 180], [100, 115, 130, 145, 160], [120, 140, 160, 180, 200]];
+      var tower_price = [[60, 60, 120, 240, 480], [80, 80, 160, 320, 640], [100, 100, 200, 400, 800], [150, 150, 300, 600, 1620]];
+      var tower_interval = [[40, 35, 30, 25, 20], [60, 55, 50, 45, 40], [120, 115, 110, 105, 100, 95], [120, 115, 110, 105, 100, 95]];
+      var tower_description = ["Low damage but high range and rate of fire.", "Medium damage, range, and rate of fire. Slows enemies.", "High damage but low range and rate of fire. Applies splash damage to nearby enemies.", "High range but low rate of fire. Deals more damage to low-health targets."];
+      var closest_index = 0;
+      var farthest_index = 1;
+      var first_index = 2;
+      var last_index = 3;
+      var strongest_index = 4;
+      var weakest_index = 5;
+      var priority_shortcut = ["Shift+U", "Shift+J", "Shift+I", "Shift+K", "Shift+O", "Shift+L"];
+      var max_level = tower_damage[0].length - 1;
+      var slow = [[0.3, 0.45, 0.6, 0.75, 0.85], [100, 120, 140, 160, 200]]; // amount, duration
+      var splash = [[0.3, 0.35, 0.4, 0.45, 0.5], [50, 55, 60, 65, 70]]; // amount, radius
+      var assassin = [8, 11, 14, 17, 20] //percent damage
+      /*var base_Arrow_range = 150;
+      var base_Ice_range = 150;
+      var base_Cannon_range = 150;*/
+      /*var base_Arrow_price = 60;
+      var base_Ice_price = 80;
+      var base_Cannon_price = 100;*/
+      var starting_gold = 240;
+      var gold;
+      var starting_lives = 20;
+      var lives;
+      var sell_ratio = 0.6; // what percentage of money put in you get back
+      var starting_wave_hp = 100;
+      var wave_hp;
+      var wave_hp_factor = 1.25;
+      var wave_bounty = 10;
+      var wave_bounty_factor = 1.15;
+      var level = 0;
+      var tooltip_group;
+
+
+      $( document ).ready(function() {
+        $("#selection").click(function(e){
+          clickField(e);
+        });
+
+        $("#selection").mouseleave( function(e){
+          $("#selection").attr("visibility", "hidden");
+          $("#range").attr("visibility", "hidden");
+        });
+
+        window.addEventListener("keydown", keyDown, false);
+        newGame();
+      });
+      function newGame() {
+        start_time = new Date().getTime();
+        game_over = false;
+        $("#game_over_group").attr("visibility", "hidden");
+        if (minionQueue != null) {
+          var minion;
+          var temp;
+          var len = minionQueue.length;
+          for (var i = 0; i < len; i++) {
+            minion = minionQueue.shift();
+            temp = minion.svg.parentNode;
+            temp.removeChild(minion.svg);
+          }
+        }
+        if (towerQueue != null) {
+          var tower;
+          var temp;
+          var len = towerQueue.length;
+          for (var i = 0; i < len; i++) {
+            tower = towerQueue.shift();
+            temp = tower.svg.parentNode;
+            temp.removeChild(tower.svg);
+          }
+        }
+        if (missileQueue != null) {
+          var missile;
+          var temp;
+          var len = missileQueue.length;
+          for (var i = 0; i < len; i++) {
+            missile = missileQueue.shift();
+            temp = missile.svg.parentNode;
+            temp.removeChild(missile.svg);
+          }
+        }
+        level = 0;
+        wave_hp = starting_wave_hp;
+        $("#level").text("Level: 0");
+        gold = starting_gold;
+        $("#gold").text(gold);
+        lives = starting_lives;
+        $("#lives").text(lives);
+        updateBuyable();
+        initializeField();
+      }
+      function keyDown(e) {
+        //if ((e.keyCode == 32) && (live_minions == 0)) {
+        if (e.keyCode == 27) { //ESC
+          if (building) {
+            $("#selection").attr("visibility", "hidden");
+            $("#range").attr("visibility", "hidden");
+            clearSelection();
+            building = false;
+          } else {
+            clearSelection();
+          }
+          return;
+        }
+        if (e.keyCode == 32) {    //space
+          if (!game_over) {
+            spawnWave(10, wave_hp, "slow", 10, "rgb(92, 51, 23)", wave_bounty, level + 1);
+          }
+          return;
+        }
+        if ((e.shiftKey) && (e.keyCode == 85)) { //shift-U
+          if (selectedTower != null) {
+            clickPriority(null, $("#priority_closest_button"));
+          }
+          return;
+        }
+        if ((e.shiftKey) && (e.keyCode == 73)) { //shift-I
+          if (selectedTower != null) {
+            clickPriority(null, $("#priority_first_button"));
+          }
+          return;
+        }
+        if ((e.shiftKey) && (e.keyCode == 79)) { //shift-O
+          if (selectedTower != null) {
+            clickPriority(null, $("#priority_strongest_button"));
+          }
+          return;
+        }
+        if ((e.shiftKey) && (e.keyCode == 74)) { //shift-J
+          if (selectedTower != null) {
+            clickPriority(null, $("#priority_farthest_button"));
+          }
+          return;
+        }
+        if ((e.shiftKey) && (e.keyCode == 75)) { //shift-K
+          if (selectedTower != null) {
+            clickPriority(null, $("#priority_last_button"));
+          }
+          return;
+        }
+        if ((e.shiftKey) && (e.keyCode == 76)) { //shift-L
+          if (selectedTower != null) {
+            clickPriority(null, $("#priority_weakest_button"));
+          }
+          return;
+        }
+        if (e.keyCode == 49) { //1
+          buy($("#buy_Arrow"));
+          return;
+        }
+        if (e.keyCode == 50) { //2
+          buy($("#buy_Ice"));
+          return;
+        }
+        if (e.keyCode == 51) { //3
+          buy($("#buy_Cannon"));
+          return;
+        }
+        if (e.keyCode == 52) { //4
+          buy($("#buy_Assassin"));
+          return;
+        }
+        if (e.keyCode == 80) { //(P)ause
+          if (playing) {
+            playing = false;
+            window.cancelAnimationFrame(requestID);
+            return;
+          } else {
+            playing = true;
+            requestID = window.requestAnimationFrame(draw);
+            return;
+          }
+        }
+        if (e.keyCode == 83) { //(S)ell
+          if (selectedTower != null) {
+            sellTower(null);
+            return;
+          }
+        }
+        if (e.keyCode == 85) { //(U)pgrade
+          if (selectedTower != null) {
+            upgradeTower(null);
+            return;
+          }
+        }
+      }
+      function initializeField() {
+        grid = document.getElementById("field");
+        offset = $("#field").offset();
+        grid_width = parseInt(grid.getAttribute("width")) / grid_increment;
+        grid_height = parseInt(grid.getAttribute("height")) / grid_increment;
+        for(var i = 0; i < grid_width; i++) {
+          grid_array[i] = [];
+          for(var j = 0; j < grid_height; j++) {
+            grid_array[i][j] = 0;
+          }
+        }
+
+        path = document.getElementById("path");
+        var path_d = "M" + path_array[0];
+        var current_p;
+        var last_p;
+        var current_grid_x;
+        var last_grid_x;
+        var current_grid_y;
+        var last_grid_y;
+        path_start = getPathPoint(path_array, 0);
+        last_p = path_start;
+        last_grid_x = Math.floor((last_p.x + parseInt(path.getAttribute("stroke-width"))) / grid_increment) - 1;
+        last_grid_y = Math.floor((last_p.y + parseInt(path.getAttribute("stroke-width"))) / grid_increment) - 1;
+        for (var i = 1; i < path_array.length; i++) {
+          path_d = path_d + " L" + path_array[i];
+          current_p = getPathPoint(path_array, i);
+          current_grid_x = Math.floor((current_p.x + parseInt(path.getAttribute("stroke-width"))) / grid_increment) - 1;
+          current_grid_y = Math.floor((current_p.y + parseInt(path.getAttribute("stroke-width"))) / grid_increment) - 1;
+          if (current_grid_x >= grid_width) {
+            current_grid_x = grid_width - 1;
+          }
+          if (current_grid_y >= grid_height) {
+            current_grid_y = grid_height - 1;
+          }
+          //alert("new");
+          var j = last_grid_x;
+          var k = last_grid_y;
+          while (true) {
+            while (true) {
+              grid_array[j][k] = 1;
+              //alert(j + ", " + k);
+              if (k > current_grid_y) {
+                k--;
+              } else if (k < current_grid_y) {
+                k++;
+              } else {
+                break;
+              }
+            }
+            if (j > current_grid_x) {
+              j--;
+            } else if (j < current_grid_x) {
+              j++;
+            } else {
+              break;
+            }
+          }
+          last_p = current_p;
+          last_grid_x = current_grid_x;
+          last_grid_y = current_grid_y;
+          /*var point = document.createElementNS(svg_url,"circle");
+          point.setAttribute("cx", current_p.x);
+          point.setAttribute("cy", current_p.y);
+          point.setAttribute("r", 5);
+          document.getElementById("mySVG").appendChild(point);*/
+        }
+        path.setAttribute("d", path_d);
+        path_len = path.getTotalLength();
+        path_end = current_p;
+
+        $(path).mousemove(function(e){
+          mouseOverPath(e);
+        });
+        $(path).click(function(e) {
+          clearSelection();
+        });
+
+        $("#field").mousemove(function(e){
+          mouseOverField(e);
+        });
+        /*$("#selection").mouseleave(function(){
+          $("#selection").attr("visibility", "hidden");
+        });*/
+
+        //path_start.x = path_d.slice(1, path_d.search(" ") - 1);
+        //alert(path_end.x + ", " + path_end.y);
+        //path_start.y = path_d.slice(path_d.search(" ") + 1, path_d.search("L") - 1);
+      }
+      function getPathPoint(array, index) {
+        var p = document.getElementById("mySVG").createSVGPoint();
+        var elem = array[index];
+        p.x = elem.slice(0, elem.search(" ") );
+        p.y = elem.slice(elem.search(" ") + 1,  elem.length);
+        return p;
+      }
+      function spawnWave(num_minions, hp, speed, radius, fill, bounty, wave_num) {
+        level++;
+        $("#level").text("Level: " + level);
+        for(var i = 0; i < num_minions; i++) {
+          new Minion(i, hp, speed, radius, fill, bounty, wave_num);
+        }
+        live_minions += num_minions;
+        if (!playing) {
+          playing = true;
+          requestID = window.requestAnimationFrame(draw);
+        }
+        wave_hp = Math.floor(wave_hp * wave_hp_factor);
+        wave_bounty = Math.floor(wave_bounty * wave_bounty_factor);
+      }
+      /*function createMinion(num, hp, speed, radius, fill, bounty) {
+
+
+        //window.setTimeout(function() {min.setAttribute("visibility", "visible"); minionQueue.push(new Minion(hp, min, duration));},500*(num));
+
+      }*/
+      //function Minion(num, hp, svg, duration, bounty) {
+      function Minion(num, hp, speed, radius, fill, bounty, wave_num) {
+        var duration = window[speed + "_duration"];
+        var min = document.createElementNS(svg_url, "circle");
+        min.setAttribute("r", radius.toString());
+        min.setAttribute("cx", path_start.x);
+        min.setAttribute("cy", path_start.y);
+        min.setAttribute("visibility", "hidden");
+        min.setAttribute("id","minion_" + wave_num + "_" + num);
+        min.setAttribute("fill", fill);
+        min.setAttribute("stroke", "black");
+        min.setAttribute("stroke-width", 0.5);
+        min.setAttribute("class", "button");
+
+        document.getElementById("mySVG").appendChild(min);
+
+
+        this.hp = hp;
+        this.svg = min;
+        this.max_hp = hp;
+        this.speed = speed;
+        this.num = num;
+        this.fill = fill;
+        //alert(this.num);
+        if (num == 0) {
+          this.alive = true;
+          min.setAttribute("visibility", "visible");
+        } else {
+          this.alive = false;
+        }
+        this.frames_to_spawn = Math.round(0.5 * fps * num);
+        //this.start_time = new Date().getTime();
+        this.increment_size = path_len * int / (1000*duration);
+        //alert(this.increment_size);
+        this.increment = 0;
+        this.slowed_timer = 0;
+        this.slowed = false;
+        this.slowed_amount = 0;
+        this.bounty = bounty;
+        this.selected = false;
+        minionQueue.push(this);
+
+        var self = this;
+        $(this.svg).click(function(e){
+          //alert(this.hp + "/" + this.max_hp);
+          clearSelection();
+          selectedMinion = self;
+          self.selected = true;
+          $(self.svg).attr("fill", "yellow");
+          var temp = self.svg.parentNode;
+          temp.removeChild(self.svg);
+          temp.appendChild(self.svg);
+          refreshMinionDetails(self);
+        });
+      }
+      function Tower(tower_type, grid_x, grid_y) {
+        var tow = document.createElementNS(svg_url,"rect");
+        var x = grid_x * grid_increment;
+        var y = grid_y * grid_increment;
+        tow.setAttribute("x", x);
+        tow.setAttribute("y", y);
+        tow.setAttribute("height", grid_increment);
+        tow.setAttribute("width", grid_increment);
+        tow.setAttribute("class", "overlay");
+        tow.setAttribute("stroke", "black");
+        tow.setAttribute("stroke-width", "1");
+        tow.setAttribute("class", "button");
+        this.id = "tower" + (new Date().getTime() - start_time).toString();
+        tow.setAttribute("id", this.id);
+        this.type = tower_type;
+        this.cx = parseInt(x) + 0.5 * parseInt(grid_increment);
+        this.cy = parseInt(y) + 0.5 * parseInt(grid_increment);
+        this.grid_x = Math.floor(this.cx / grid_increment);
+        this.grid_y = Math.floor(this.cy / grid_increment);
+        grid_array[this.grid_x][this.grid_y] = 2;
+        this.start_frame = frame;
+        this.svg = tow;
+        this.slow = 0;
+        this.slow_duration = 0;
+        this.splash_damage = 0;
+        this.splash_radius = 0;
+        this.increment = 0;
+        this.kills = 0;
+        this.shots = 0;
+        this.selected = false;
+
+        this.index = window[tower_type + "_index"]; //set base attributes
+        this.level = 0;
+        this.damage = tower_damage[this.index][this.level];
+        this.range = tower_range[this.index][this.level];
+        this.interval = tower_interval[this.index][this.level];//interval in frames
+
+        this.shoot = function() {
+          if(live_minions == 0) {
+            return;
+          }
+          var index = findTarget(this, this.priority);
+
+          if (index != -1) {
+            var target = minionQueue[index];
+            var self = this;
+            var missile = new Missile(self, target, index);
+            this.shots++;
+            self.increment++;
+            //alert("target found");
+            //var pathLoop = setInterval(function() {updatePath(self, missile, target, index, pathLoop)}, 20);
+            //window.requestAnimationFrame(updatePath(self, missile, target, index));
+          } else {
+            return;
+          }
+        };
+        switch(tower_type) {
+            case "Arrow":
+              this.fill = "rgb(110, 70, 60)";
+              this.selected_fill = "rgb(140, 100, 90)";
+              tow.setAttribute("fill", this.fill);
+              //this.projectile_radius = 5;
+              //this.projectile_color = "rgb(60, 20, 10)";
+              this.special = "none";
+              this.priority = "first";
+              break;
+            case "Ice":
+              this.fill = "rgb(85, 115, 170)";
+              this.selected_fill = "rgb(115, 145, 200)";
+              tow.setAttribute("fill", this.fill);
+              //this.projectile_radius = 5;
+              //this.projectile_color = "rgb(0, 50, 75)";
+              this.slow = slow[0][this.level];
+              this.slow_duration = slow[1][this.level];
+              this.special = "slow";
+              this.priority = "strongest";
+              break;
+            case "Cannon":
+              this.fill = "rgb(100, 100, 100)";
+              this.selected_fill = "rgb(130, 130, 130)";
+              tow.setAttribute("fill", this.fill);
+              //this.projectile_radius = 10;
+              //this.projectile_color = "rgb(0, 0, 0)";
+              this.splash_damage = splash[0][this.level];
+              this.splash_radius = splash[1][this.level];
+              this.special = "splash";
+              this.priority = "closest";
+              break;
+            case "Assassin":
+              this.fill = "rgb(0, 100, 0)";
+              this.selected_fill = "rgb(0, 200, 0)";
+              tow.setAttribute("fill", this.fill);
+              //this.projectile_radius = 10;
+              //this.projectile_color = "rgb(0, 0, 0)";
+              this.special = "assassin";
+              this.priority = "weakest";
+              break;
+        }
+        document.getElementById("mySVG").appendChild(tow);
+        towerQueue.push(this);
+
+        var self = this;
+        $(this.svg).mousemove(function(e){
+          mouseOverTower(e, self);
+        });
+        $(this.svg).click(function(e){
+          clickTower(e, self);
+        });
+        $(this.svg).mouseleave(function(e) {
+          if(!self.selected) {
+            $(self.svg).attr("fill", self.fill);
+          }
+          $("#range").attr("visibility", "hidden");
+        });
+        //var self = this;
+        //shootLoop = window.setInterval(function() {self.shoot(shootLoop)}, this.interval);
+        //window.setTimeout(function() {self.shoot()}, 1000);
+      }
+      function Missile(tower, target, index) {
+        var mySVG = document.getElementById("mySVG");
+        var missile_point = document.createElementNS(svg_url,"point");
+
+        $(missile_point).attr("class", "missile");
+        $(missile_point).attr("x", 0);
+        $(missile_point).attr("y", 0);
+       // $(missile_circle).attr("fill", "white");
+        //$(missile_circle).attr("visibility", "hidden");
+
+        var missile_projectile = document.createElementNS(svg_url, "use");
+        missile_projectile.setAttributeNS(xlink_url, "xlink:href", "#missile_" + tower.type);
+
+        var missile = document.createElementNS(svg_url, "g");
+        missile.appendChild(missile_point);
+        missile.appendChild(missile_projectile);
+        $(missile).attr("transform","translate(" + tower.cx + ", " + tower.cy + ")");
+
+        //missile.setAttribute("fill", tower.projectile_color);
+        this.id = "missile" + tower.id + tower.increment;
+        missile.setAttribute("id", this.id);
+        mySVG.appendChild(missile);
+        this.tower = tower;
+        this.target = target;
+        this.svg = missile;
+        this.index = index;
+        //missileQueue.push(this);
+        updatePath(this);
+      }
+      function draw() {
+        requestID = requestAnimationFrame(draw);
+        setTimeout(function () {
+          var missile;
+          var len = missileQueue.length;
+          for (var i = 0; i < len; i++) {
+            //alert(i);
+            missile = missileQueue.shift();
+            updatePath(missile);
+          }
+          var len = minionQueue.length;
+          var path = document.getElementById("path");
+          var p;
+          if (frame % 60 == 0) {
+            /*var visible = 0;
+            for (var i = 0; i < len; i++) {
+              var minion = minionQueue[i];
+              if ($(minion.svg).attr("visibility") == "visible")
+                visible++;
+            }
+            alert(visible.toString());*/
+
+          }
+          for (var i = 0; i < len; i++) {
+            minion = minionQueue.shift();
+            if ((!minion.alive) || (minion.svg.getAttribute("visibility") == "hidden")) {
+              if (minion.frames_to_spawn > 1) {
+                minion.frames_to_spawn--;
+                //alert(minion.frames_to_spawn);
+                minionQueue.push(minion);
+                continue;
+              } else if (minion.frames_to_spawn == 1) {
+                minion.alive = true;
+                minion.svg.setAttribute("visibility", "visible");
+                minion.frames_to_spawn--;
+              } else {
+                continue;
+              }
+            }
+            //diff = new Date().getTime() - minion.start_time;
+            var increment_size = minion.increment_size;
+            if (minion.slowed) {
+              increment_size *= (1 - minion.slowed_amount);
+              minion.slowed_timer--;
+              if (minion.slowed_timer <= 0) {
+                //alert(minion.slowed_timer);
+                minion.slowed = false;
+                minion.slowed_amount = 0;
+                minion.slowed_timer = 0;
+              }
+            }
+            minion.increment += increment_size;
+            p = path.getPointAtLength(minion.increment);
+            //alert(p.x + ", " + p.y + " (" + minion.increment_size + ")");
+            minion.svg.setAttribute("cx", p.x);
+            minion.svg.setAttribute("cy", p.y);
+            if (getDistance(p.x, p.y, path_end.x, path_end.y) <= minion.svg.getAttribute("r")) {      //reached the end
+              minion.svg.setAttribute("visibility", "hidden");
+              if (selectedMinion != null) { //clear selection if selected
+                if (minion.selected) {
+                  clearSelection();
+                }
+              }
+              lives--;
+              if (lives == 0) {
+                $("#lives").text(lives);
+                window.cancelAnimationFrame(requestID);
+
+                gold = 0;
+                updateBuyable();
+                var game_over_group = document.getElementById("game_over_group");
+                var temp = game_over_group.parentNode;
+                temp.removeChild(game_over_group);
+                temp.appendChild(game_over_group);
+                $(game_over_group).attr("visibility", "visible");
+                document.getElementById("game_over_anim").beginElement();
+                playing = false;
+                clearSelection();
+                building = false;
+                game_over = true;
+                /*$(game_over_group).attr("id", "game_over_group");
+                //$(game_over_group).attr("opacity", "0");
+
+                var game_over_rect = document.createElementNS(svg_url, "rect");
+                $(game_over_rect).attr("id", "game_over_rect");
+                $(game_over_rect).attr("x", "0");
+                $(game_over_rect).attr("y", "0");
+                $(game_over_rect).attr("width", $("#mySVG").attr("width"));
+                $(game_over_rect).attr("height", $("#mySVG").attr("height"));
+                $(game_over_rect).attr("fill", "rgb(80, 80, 80)");
+
+                var game_over_anim = document.createElementNS(svg_url, "animate");
+                //$(game_over_anim).attr("attributeType", "CSS");
+                //game_over_anim.setAttributeNS(xlink_url, "xlink:href", "#game_over_rect");
+                $(game_over_anim).attr("attributeName", "opacity");
+                $(game_over_anim).attr("from", "0");
+                $(game_over_anim).attr("to", "1");
+                $(game_over_anim).attr("begin", "indefinite");
+                $(game_over_anim).attr("dur", "5s");
+
+                game_over_group.appendChild(game_over_anim);
+
+                game_over_group.appendChild(game_over_rect);
+                //game_over_group.appendChild(game_over_anim);
+
+                document.getElementById("mySVG").appendChild(game_over_group);
+                //game_over_anim.beginElement();*/
+              }
+            } else {
+              minionQueue.push(minion);
+            }
+            if (minion.selected) {
+              refreshMinionDetails(minion);
+            }
+          }
+          var len = towerQueue.length;
+          for (var i = 0; i < len; i++) {
+            tower = towerQueue[i];
+            if (tower.selected) {
+              refreshTowerDetails(tower);
+            }
+            if ((frame - tower.start_frame) % tower.interval == 0) {
+              tower.shoot();
+            }
+          }
+          $("#gold").text(gold);
+          $("#lives").text(lives);
+          frame++;
+          if (live_minions <= 0) {
+            window.cancelAnimationFrame(requestID);
+          }
+        }, int);
+      }
+      //function updatePath(tower, missile, target, index, loop) {
+      function updatePath(mis) {
+        var svg = document.getElementById("mySVG");
+        var missile = mis.svg;
+        //var missile_circle = missile.childNodes[0];
+        //var missile_projectile = missile.childNodes[1];
+        var tower = mis.tower;
+        var target = mis.target;
+        var index = mis.index;
+        //var p_missile = getPositionPoint(missile);
+        //alert(p_missile.x.toString() + " " + p_missile.y.toString());
+        //var transform = $(missile).attr("transform");
+        //var old_x
+        var ctm = missile.getCTM();
+        var old_x = ctm.e;
+        var old_y = ctm.f;
+
+
+        var dx = parseInt($(target.svg).attr("cx")) - old_x;
+        var dy = parseInt($(target.svg).attr("cy")) - old_y;
+        var r = Math.sqrt(dx * dx + dy * dy);
+        //var theta = -1 * Math.atan(dy / dx) + (3 / 2) * Math.PI;
+        /*if (dx >= 0) {
+          var theta = Math.PI / 2 + Math.atan2(dy, dx);
+        } else {
+          var theta = Math.PI / 2 + Math.atan2(dy, dx);
+        }*/
+        var theta = Math.PI / 2 + Math.atan2(dy, dx);
+
+        if (!target.alive) {
+          var temp = mis.svg.parentNode;
+          temp.removeChild(mis.svg);
+          return;
+        }
+        if (r <= parseInt($(target.svg).attr("r"))) {
+          //alert("hello");
+          onHit(tower, target, index, tower.damage, false);
+          var temp = missile.parentNode;
+          temp.removeChild(missile);
+          //window.clearInterval(loop);
+        } else {
+          missileQueue.push(mis);
+          if (projectile_speed < r) { //haven't reached target yet
+            var scale = projectile_speed/ r;
+            var new_x = old_x + dx * scale;
+            var new_y = old_y + dy * scale;
+            //alert($(missile).attr("transform") + " " + old_x + " " + old_y);
+
+            ctm.a = Math.cos(theta);
+            ctm.b = Math.sin(theta);
+            ctm.c = -1 * Math.sin(theta);
+            ctm.d = Math.cos(theta);
+            ctm.e = new_x;
+            ctm.f = new_y;
+
+            //$(missile).attr("transform", "rotate(" + theta + ") translate(" + new_x + ", " + new_y + ")");
+            $(missile).attr("transform", "matrix(" + ctm.a + ", " + ctm.b + ", " + ctm.c + ", " + ctm.d + ", " + ctm.e + ", " + ctm.f + ")");
+            //$(missile).attr("transform", "translate(" + new_x + "," + new_y + ")");
+            /*
+            missile.setAttribute("cx", parseInt(missile.getAttribute("cx")) + parseInt((dx * scale)));
+            missile.setAttribute("cy", parseInt(missile.getAttribute("cy")) + parseInt((dy * scale)));*/
+          } else { //reached target
+            missile.setAttribute("cx", target.svg.getAttribute("cx"));
+            missile.setAttribute("cy", target.svg.getAttribute("cy"));
+          }
+
+        }
+      }
+      function onHit(tower, target, index, damage, isSplash) {
+        if (tower.type == "Assassin") {
+          var missing_hp = target.max_hp - target.hp;
+          var percent_damage = Math.round(missing_hp * assassin[tower.level] * 0.01);
+          if (percent_damage > damage) {
+            damage = percent_damage;
+          }
+        }
+
+        target.hp -= damage;
+        target.svg.setAttribute("fill-opacity", target.hp/target.max_hp);
+        target.svg.setAttribute("stroke-opacity", 2*target.hp/target.max_hp);
+
+        if (target.hp <= 0) {
+          target.alive = false;
+          /*target.svg.setAttribute("cx", 0);
+          target.svg.setAttribute("cy", 0);
+          target.svg.setAttribute("visibility", "hidden");*/
+          var temp = target.svg.parentNode;
+          temp.removeChild(target.svg);
+          live_minions--;
+          tower.kills++;
+          gold += target.bounty;
+          updateBuyable();
+          var len = minionQueue.length;
+          for(var i = 0; i < len; i++) { //clean up minionQueue
+            var min = minionQueue.shift();
+            if ((min.alive) || (min.frames_to_spawn >= 1)) {
+              minionQueue.push(min);
+            }
+          }
+          if (target.selected) {
+            clearSelection();
+          }
+        } else {
+          if(tower.slow > 0) {
+            target.slowed = true;
+            if (target.slowed_amount <= tower.slow) {
+              target.slowed_amount = tower.slow;
+              target.slowed_timer = tower.slow_duration;
+              //alert(target.slowed_amount + " " + target.slowed_timer);
+            }
+            //target.slowed_timer = tower.slow_duration;
+          }
+        }
+        if ((!isSplash) && (tower.splash_damage > 0)) {
+          var p = document.getElementById("mySVG").createSVGPoint();
+          p.x = target.svg.getAttribute("cx");
+          p.y = target.svg.getAttribute("cy");
+          var dx;
+          var dy;
+          var r;
+          for(var i = 0; i < minionQueue.length; i++) {
+            if (i == index) {
+              continue;
+            }
+            var minion = minionQueue[i];
+            if (!minion.alive) {
+              continue;
+            }
+            r = getDistance(parseInt(minion.svg.getAttribute("cx")), parseInt(minion.svg.getAttribute("cy")), p.x, p.y);
+            if (r <= tower.splash_radius) {
+              onHit(tower, minion, i, damage * tower.splash_damage, true);
+            }
+          }
+          //var temp = p.parentNode;
+          //temp.removeChild(p);
+        }
+      }
+      /*function getPositionPoint(svg_obj) {
+        if(svg_obj == null) {
+          return null;
+        }
+        var p = document.getElementById("mySVG").createSVGPoint();
+        var box = svg_obj.getBBox();
+        p.x = 0;
+        p.y = 0;
+        var ctm = svg_obj.getScreenCTM();
+        p = p.matrixTransform(ctm);
+        if(svg_obj.getAttribute("id") == null) {
+          alert(p.x + " " + p.y);
+        }
+        return p;
+      }*/
+      function findTarget(tower, mode) {
+        var index = -1;
+        switch(mode) {
+          case "closest":
+            var closest_val = 99999;
+            var p = document.getElementById("mySVG").createSVGPoint();
+            for(var  i = 0; i < minionQueue.length; i++) {
+              var minion = minionQueue[i];
+              if (!minion.alive) {
+                continue;
+              }
+              p.x = minion.svg.getAttribute("cx");
+              p.y = minion.svg.getAttribute("cy");
+              if(minion.svg.getAttribute("visibility") == "hidden") {
+                continue;
+              }
+              var r = getDistance(tower.cx, tower.cy, p.x, p.y);
+              if ((r < closest_val) && (r <= tower.range)) {
+                closest_val = r;
+                index = i;
+              }
+            }
+            //var temp = p.parentNode;
+            //temp.removeChild(p);
+            break;
+          case "farthest":
+            var farthest_val = -1;
+            var p = document.getElementById("mySVG").createSVGPoint();
+            for(var  i = 0; i < minionQueue.length; i++) {
+              var minion = minionQueue[i];
+              if (!minion.alive) {
+                continue;
+              }
+              p.x = minion.svg.getAttribute("cx");
+              p.y = minion.svg.getAttribute("cy");
+              if ((minion.svg.getAttribute("visibility") == "hidden")|| (!isInRange(tower, p))) {
+                continue;
+              }
+              var r = getDistance(tower.cx, tower.cy, p.x, p.y);
+              if ((r > farthest_val) && (r <= tower.range)) {
+                farthest_val = r;
+                index = i;
+              }
+            }
+            break;
+          case "first":
+            var highest_increment = -1;
+            var p = document.getElementById("mySVG").createSVGPoint();
+            for(var  i = 0; i < minionQueue.length; i++) {
+              var minion = minionQueue[i];
+              if(!minion.alive) {
+                continue;
+              }
+
+              p.x = minion.svg.getAttribute("cx");
+              p.y = minion.svg.getAttribute("cy");
+              if ((minion.svg.getAttribute("visibility") == "hidden") || (!isInRange(tower, p))) {
+                continue;
+              }
+              if (minion.increment > highest_increment) {
+                highest_increment = minion.increment;
+                index = i;
+              }
+            }
+            break;
+          case "last":
+            var lowest_increment = 99999;
+            var p = document.getElementById("mySVG").createSVGPoint();
+            for(var  i = 0; i < minionQueue.length; i++) {
+              var minion = minionQueue[i];
+              if(!minion.alive) {
+                continue;
+              }
+
+              p.x = minion.svg.getAttribute("cx");
+              p.y = minion.svg.getAttribute("cy");
+              if ((minion.svg.getAttribute("visibility") == "hidden") || (!isInRange(tower, p))) {
+                continue;
+              }
+              if (minion.increment < lowest_increment) {
+                lowest_increment = minion.increment;
+                index = i;
+              }
+            }
+            break;
+          case "strongest":
+            var highest_hp = -1;
+            var p = document.getElementById("mySVG").createSVGPoint();
+            for(var  i = 0; i < minionQueue.length; i++) {
+              var minion = minionQueue[i];
+              if(!minion.alive) {
+                continue;
+              }
+
+              p.x = minion.svg.getAttribute("cx");
+              p.y = minion.svg.getAttribute("cy");
+              if ((minion.svg.getAttribute("visibility") == "hidden") || (!isInRange(tower, p))) {
+                continue;
+              }
+              if (minion.hp > highest_hp) {
+                highest_hp = minion.hp;
+                index = i;
+              }
+            }
+            break;
+          case "weakest":
+            var lowest_hp = 99999;
+            var p = document.getElementById("mySVG").createSVGPoint();
+            for(var  i = 0; i < minionQueue.length; i++) {
+              var minion = minionQueue[i];
+              if(!minion.alive) {
+                continue;
+              }
+
+              p.x = minion.svg.getAttribute("cx");
+              p.y = minion.svg.getAttribute("cy");
+              if ((minion.svg.getAttribute("visibility") == "hidden") || (!isInRange(tower, p))) {
+                continue;
+              }
+              if (minion.hp < lowest_hp) {
+                lowest_hp = minion.hp;
+                index = i;
+              }
+            }
+            break;
+        }
+        return index;
+      }
+      function isInRange(tower, p) {
+        var r = getDistance(tower.cx, tower.cy, p.x, p.y);
+
+        //alert(r);
+        if (r <= tower.range) {
+          //alert("d");
+          return true;
+        }
+        return false;
+      }
+      /*function getDistance(tower, p) {
+        var tower_cx = parseInt(tower.svg.getAttribute("x")) + 0.5*parseInt(tower.svg.getAttribute("width"));
+        var tower_cy = parseInt(tower.svg.getAttribute("y")) + 0.5*parseInt(tower.svg.getAttribute("height"));
+        var dx = p.x - tower_cx;
+        var dy = p.y - tower_cy;
+        var r = Math.sqrt(dx*dx + dy*dy);
+        return r;
+      }*/
+      function getDistance(x1, y1, x2, y2) {
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        var r = Math.sqrt(dx * dx + dy * dy);
+        return r;
+      }
+      function getGridCoordinates(e) {
+        var grid_coord = [];
+        var grid_x = Math.floor((e.clientX - offset.top)/ grid_increment);
+        var grid_y = Math.floor((e.clientY - offset.top)/ grid_increment);
+        if (grid_x >= grid_width) {
+          grid_x = grid_width - 1;
+        }
+        if (grid_y >= grid_height) {
+          grid_y = grid_height - 1;
+        }
+        grid_coord[0] = grid_x;
+        grid_coord[1] = grid_y;
+        return grid_coord;
+      }
+      function mouseOverPath(e) {
+        var grid_coord = getGridCoordinates(e);
+        var grid_x = grid_coord[0];
+        var grid_y = grid_coord[1];
+
+        $("#selection").attr("x", (grid_x * grid_increment).toString());
+        $("#selection").attr("y", (grid_y * grid_increment).toString());
+        $("#selection").attr("visibility", "hidden");
+      }
+      function mouseOverField(e) {
+        if (!building) {
+          return;
+        }
+        var grid_coord = getGridCoordinates(e);
+        var grid_x = grid_coord[0];
+        var grid_y = grid_coord[1];
+
+        $("#selection").attr("x", (grid_x * grid_increment).toString());
+        $("#selection").attr("y", (grid_y * grid_increment).toString());
+        $("#selection").attr("visibility", "");
+        //alert(grid_array[grid_x][grid_y]);
+        //alert(grid_x + ", "+ grid_y);
+        $("#range").attr("cx" , (grid_x + 0.5) * grid_increment);
+        $("#range").attr("cy", (grid_y + 0.5) * grid_increment);
+        var index = window[building_type + "_index"];
+        $("#range").attr("r", tower_range[index][0]);
+        $("#range").attr("fill", "none");
+        $("#range").attr("stroke", "black");
+        $("#range").attr("stroke-width", "1");
+        $("#range").attr("visibility", "visible");
+        document.getElementById("mySVG").appendChild(range);
+      }
+      function mouseOverTower(e, tower) {
+        var grid_coord = getGridCoordinates(e);
+        var grid_x = grid_coord[0];
+        var grid_y = grid_coord[1];
+
+        $("#selection").attr("x", (grid_x * grid_increment).toString());
+        $("#selection").attr("y", (grid_y * grid_increment).toString());
+        $(tower.svg).attr("fill", tower.selected_fill);
+        //$("#selection").attr("visibility", "");
+        //alert(grid_array[grid_x][grid_y]);
+        //alert(grid_x + ", "+ grid_y);
+
+        if (!building) {
+          showRange(tower);
+        }
+      }
+      function clickField(e) {
+        if (!building) {
+          return;
+        }
+        var grid_coord = getGridCoordinates(e);
+        var grid_x = grid_coord[0];
+        var grid_y = grid_coord[1];
+        var index = window[building_type + "_index"];
+        var price = tower_price[index][0];
+        if (price <= gold) {
+          gold -= price;
+          updateBuyable();
+          $("#gold").text(gold);
+          if (gold < price) {
+            building = false;
+            $("#buy_" + building_type).attr("stroke-width", 1);
+          }
+          var tower = new Tower(building_type, grid_x.toString(), grid_y.toString());
+        }
+        /*tower.selected = true;
+        $(tower.svg).attr("opacity", 0.6);*/
+        //building = false;
+        //$("#buy_" + building_type).attr("stroke-width", 1);
+        clickTower(e, tower);
+      }
+      function updateBuyable() {
+        for (var i = 0; i < types.length; i++) {
+          if (tower_price[i][0] > gold) {
+            $("#buy_" + types[i]).attr("opacity", "0.3");
+          } else {
+            $("#buy_" + types[i]).attr("opacity", "1");
+          }
+        }
+        if (selectedTower != null) {
+          if (selectedTower.level == max_level) {
+            $("#upgrade").attr("opacity", "0.3");
+            return;
+          }
+          var upgrade_price = tower_price[selectedTower.index][selectedTower.level + 1];
+          if (upgrade_price > gold) {
+            $("#upgrade").attr("opacity", "0.3");
+          } else {
+            $("#upgrade").attr("opacity", "1");
+          }
+        }
+      }
+      function clickTower(e, tower) {
+        //alert(tower.kills + " kills, " + tower.shots + " shots");
+        clearSelection(true);
+        tower.selected = true;
+        selectedTower = tower;
+        //$(tower.svg).attr("opacity", 0.6);
+        $(tower.svg).attr("fill", tower.selected_fill);
+        if (selectedPriority != null) {
+          //$(selectedPriority).attr("fill","rgb(70, 119, 187)");
+          $(selectedPriority).attr("fill","rgb(120, 169, 237)");
+        }
+        var id = "priority_" + tower.priority + "_button";
+        selectedPriority = document.getElementById(id);
+        $(selectedPriority).attr("fill","rgb(70, 119, 187)");
+
+        showRange(tower);
+        refreshTowerDetails(tower);
+        updateBuyable();
+
+      }
+      function clearSelection(keepCursorOn) {
+        if (selectedTower != null) {
+          selectedTower.selected = false;
+          $(selectedTower.svg).attr("fill", selectedTower.fill);
+          //$(selectedTower.svg).attr("opacity", 1);
+          $("#tower_details_group").attr("visibility", "hidden");
+          selectedTower = null;
+        }
+        if (selectedMinion != null) {
+          selectedMinion.selected = false;
+          $("#minion_details_group").attr("visibility", "hidden");
+          $(selectedMinion.svg).attr("fill", selectedMinion.fill);
+          selectedMinion = null;
+        }
+
+        if ((building) && (keepCursorOn == undefined)) {
+          building = false;
+          $("#buy_" + building_type).attr("stroke-width", 1);
+        }
+      }
+      /*function getBaseRange(type) {
+        switch (type) {
+            case "Arrow":
+              return base_Arrow_range;
+              break;
+            case "Ice":
+              return base_Ice_range;
+              break;
+            case "Cannon":
+              return base_Cannon_range;
+              break;
+        }
+      }*/
+      function showRange(tower) {
+        $("#range").attr("cx" , tower.cx);
+        $("#range").attr("cy", tower.cy);
+        $("#range").attr("r", tower.range);
+        $("#range").attr("fill", "none");
+        $("#range").attr("stroke", "black");
+        $("#range").attr("stroke-width", "1");
+        $("#range").attr("visibility", "visible");
+        document.getElementById("mySVG").appendChild(range);
+      }
+      function refreshMinionDetails(minion) {
+        $("#minion_details_name").text("Minion");
+        $("#minion_details_hp").text(minion.hp);
+        var percentage = minion.hp / minion.max_hp;
+        if (percentage > 0.75) {
+          $("#minion_details_hp").attr("fill", "rgb(50, 120, 50)");
+        } else if (percentage > 0.25) {
+          $("#minion_details_hp").attr("fill", "rgb(240, 240, 0)");
+        } else {
+          $("#minion_details_hp").attr("fill", "rgb(240, 0, 0)");
+        }
+        $("#minion_details_max_hp").text("/ " + minion.max_hp);
+        $("#minion_details_bounty").text(minion.bounty.toString() + "g");
+        $("#minion_details_speed").text(minion.increment_size * 60);
+        $("#minion_details_group").attr("visibility", "visible");
+
+      }
+      function refreshTowerDetails(tower) {
+        $("#tower_details_name").text(tower.type + " " + (tower.level + 1));
+        if (tower.type == "Assassin") {
+          $("#tower_details_damage").text("Damage: " + assassin[tower.level] + "% (min " + tower.damage + ")");
+        } else {
+          $("#tower_details_damage").text("Damage: " + tower.damage);
+        }
+        $("#tower_details_range").text("Range: " + tower.range);
+        var rate = (Math.round(600/tower.interval)/10).toString() + "/sec";
+        $("#tower_details_rate").text("Rate of fire: " + rate);
+        $("#tower_details_shots").text("Shots: " + tower.shots);
+        $("#tower_details_kills").text("Kills: " + tower.kills);
+        $("#tower_details_special").text("Special: " + tower.special);
+        $("#tower_details_group").attr("visibility", "visible");
+        var upgrade_price = getUpgradePrice(tower);
+        if (upgrade_price == -1) {
+          $("#upgrade_price").text("--");
+        } else {
+          $("#upgrade_price").text(upgrade_price.toString() + "g");
+        }
+
+        $("#sale_price").text(getSalePrice(tower).toString() + "g");
+      }
+      function clickPriority(e, svg) {
+        if (svg == null) {
+          if (e == null) {
+            return;
+          }
+          svg = e.target;
+        }
+        if ($(selectedPriority).attr("id") == $(svg).attr("id")) {
+          return;
+        }
+        $(svg).attr("fill","rgb(70, 119, 187)");
+
+        if (selectedPriority != null) {
+          $(selectedPriority).attr("fill","rgb(120, 169, 237)");
+        }
+        selectedPriority = svg;
+
+        var id = $(svg).attr("id");
+        selectedTower.priority = id.slice(id.indexOf("_") + 1, id.lastIndexOf("_"));
+        //alert(selectedTower.priority);
+        //alert($(svg).attr("id"));
+       // svg.setAttribute("fill", "black");
+      }
+      function clickBuy(e) {
+        clearSelection();
+        buy(e.target);
+        //alert(type);
+      }
+      function buy(svg) {
+        var id = $(svg).attr("id");
+        var type = id.slice(id.indexOf("_") + 1, id.length);
+        var index = window[type + "_index"];
+        if (tower_price[index][0] > gold) {
+          //alert("you are too poor!");
+          return;
+        }
+        $("#buy_" + building_type).attr("stroke-width", 1);
+        building = true;
+        building_type = type;
+        $(svg).attr("stroke-width", "3");
+        $("#selection").attr("fill", $(svg).attr("fill"));
+      }
+      function mouseOverButton(e) {
+        var svg = e.target;
+        var svg_height = $(svg).attr("height");
+        var svg_width = $(svg).attr("width");
+        var box_height = 50;
+        var box_width = 180;
+        if ((svg_height == undefined) || (svg_width == undefined)) {
+          if ($(svg).attr("xlink:href") != undefined) { //priority buttons
+            svg_height = $($(svg).attr("xlink:href")).attr("height");
+            svg_width = $($(svg).attr("xlink:href")).attr("width");
+            box_width = 70;
+          }
+          if ((svg_height == undefined) || (svg_width == undefined)) {
+            return;
+          }
+        }
+        $(svg).attr("opacity", "0.7");
+        tooltip_group = document.createElementNS(svg_url, "g");
+
+        var tooltip_box = document.createElementNS(svg_url, "rect");
+
+        $(tooltip_box).attr("width", box_width);
+        $(tooltip_box).attr("height", box_height);
+        var x = parseInt($(svg).attr("x")) + 0.5 * parseInt(svg_width) - 0.5 * box_width;
+        if (x < 0) {
+          x = 0;
+        } else if (x + box_width >= parseInt($("#mySVG").attr("width"))) {
+          x = parseInt($("#mySVG").attr("width")) - box_width;
+        }
+        $(tooltip_box).attr("x", x);
+
+        var y = parseInt($(svg).attr("y")) + parseInt(svg_height) + 6;
+        /*if (y < 0) {
+        } else if (y + box_height >= parseInt($("#mySVG").attr("height"))) {
+          y = parseInt($("#mySVG").attr("height")) - box_height;
+        }*/
+
+        $(tooltip_box).attr("y", y);
+        $(tooltip_box).attr("fill", "rgb(50, 50, 50)");
+        $(tooltip_box).attr("stroke", "black");
+        $(tooltip_box).attr("stroke-width", "1");
+
+        var details = getDetails(svg); // title, price, description
+
+        var title = document.createElementNS(svg_url, "tspan");
+        $(title).text(details[0]);
+        $(title).attr("x", x + 0.5 * box_width);
+        $(title).attr("y", y + 15);
+        $(title).attr("text-anchor", "middle");
+        $(title).attr("font-weight", "bold");
+        $(title).attr("font-size", "12");
+        $(title).attr("fill", "white");
+
+        var price = document.createElementNS(svg_url, "tspan");
+        $(price).text(details[1]);
+        $(price).attr("text-anchor", "end");
+        $(price).attr("x", x + box_width - 6);
+        $(price).attr("y", y + 15);
+        $(price).attr("fill", "rgb(255, 215, 0)");
+        $(price).attr("font-size", "12");
+
+
+        /*var desc1 = document.createElementNS(svg_url, "tspan");
+        $(desc1).text("Low damage but high range and");
+        $(desc1).attr("x", x + 0.5 * box_width);
+        $(desc1).attr("y", y + 24);
+        $(desc1).attr("text-anchor", "middle");
+        $(desc1).attr("fill", "white");
+
+        var desc2 = document.createElementNS(svg_url, "tspan");
+        $(desc2).text("rate of fire.");
+        $(desc2).attr("x", x + 0.5 * box_width);
+        $(desc2).attr("y", y + 36);
+        $(desc2).attr("text-anchor", "middle");
+        $(desc2).attr("fill", "white");    */
+
+
+
+        var tooltip_text = document.createElementNS(svg_url, "text");
+        $(tooltip_text).attr("font-family", "helvetica");
+        $(tooltip_text).attr("font-size", "10");
+        tooltip_text.appendChild(title);
+        tooltip_text.appendChild(price);
+        var lines = process_text(tooltip_text, details[2], x, y, box_width);
+//        tooltip_text.appendChild(desc1);
+//        tooltip_text.appendChild(desc2);
+
+        $(tooltip_group).attr("opacity", "0.9");
+
+        $(tooltip_box).attr("height", 24 + 12 * lines);
+        //box_height = 24 + 12 * lines;
+
+
+        tooltip_group.appendChild(tooltip_box);
+        tooltip_group.appendChild(tooltip_text);
+
+        document.getElementById("mySVG").appendChild(tooltip_group);
+
+
+      }
+      function getDetails(svg) {
+        var details = []; // title, price, description
+        var svg_class = $(svg).attr("class");
+        if (svg_class == undefined) {
+          if ($(svg).attr("xlink:href") != undefined) {
+            svg_class = $($(svg).attr("xlink:href")).attr("class");
+          }
+          if (svg_class == undefined) {
+            return;
+          }
+        }
+        var id = $(svg).attr("id");
+        var button_type = svg_class.slice(svg_class.indexOf(" ") + 1, svg_class.length);
+        switch (button_type) {
+            case "buy":
+                var type = id.slice(id.indexOf("_") + 1, id.length);
+                var index = window[type + "_index"];
+                details[0] = type + " Tower (" + (index + 1) + ")";
+                details[1] = tower_price[index][0] + "g";
+                details[2] = tower_description[index];
+              break;
+            case "priority":
+                var priority = id.slice(id.indexOf("_") + 1, id.lastIndexOf("_"));
+                var index = window[priority + "_index"];
+                //details[0] = $("#priority_" + priority + "_text").text() + " (" + priority_shortcut[index] + ")";
+                details[0] = " (" + priority_shortcut[index] + ")";
+                details[1] = "";
+                details[2] = "";
+              break;
+            case "upgrade":
+                details[0] = "Upgrade (u)";
+                details[1] = $("#upgrade_price").text();
+                details[2] = "Upgrade tower to the next level. Maximum level is 5.";
+              break;
+            case "sell":
+                details[0] = "Sell (s)";
+                details[1] = $("#sale_price").text();
+                details[2] = "Sell tower. " + Math.round(sell_ratio * 100) + "% of gold spent is refunded.";
+              break;
+        }
+        return details;
+      }
+      function process_text(svg, text, x, y, box_width) {
+        //var lines = Math.ceil(text.length / max_char);
+        var descs = [];
+        /*for (var i = 0; i < lines; i++) {
+
+        }*/
+        descs = process_text_recursive(descs, text, 0);
+        for (var i = 0; i < descs.length; i++) {
+          var desc = document.createElementNS(svg_url, "tspan");
+          $(desc).attr("x", x + 0.5 * box_width);
+          $(desc).attr("y", y + 30 + (12 * i));
+          $(desc).attr("text-anchor", "middle");
+          $(desc).attr("fill", "white");
+          $(desc).text(descs[i]);
+          svg.appendChild(desc);
+        }
+        return descs.length;
+      }
+      function process_text_recursive(descs, text, i) {
+        if (text.length == 0) {
+          return descs;
+        }
+        var max_char = 37;
+        if (text.length <= max_char) {
+          descs[i] = text;
+          //alert(text);
+          return descs;
+        }
+
+        var substr_raw = text.slice(0, max_char);
+        var last_space = substr_raw.lastIndexOf(" ");
+        if (last_space == -1) {
+          descs = null;
+          descs = ["Error: Overflow"];
+          return descs;
+        }
+        var substr_cut = substr_raw.slice(0, last_space);
+        var remainder = text.slice(last_space + 1, text.length);
+        descs[i] = substr_cut;
+        //alert(substr_cut);
+        return process_text_recursive(descs, remainder, i + 1);
+      }
+      function mouseLeaveButton(e) {
+        var svg = e.target;
+        $(svg).attr("opacity", 1);
+        tooltip_group.parentNode.removeChild(tooltip_group);
+      }
+      function upgradeTower(e) {
+        if (selectedTower == null) {
+          alert("hax");
+          return;
+        }
+        var upgrade_price = getUpgradePrice(selectedTower);
+        if (upgrade_price == -1)  {
+          return;
+        }
+        if (gold < upgrade_price) {
+          return;
+        }
+
+        gold -= upgrade_price;
+        selectedTower.level++;
+        var level = selectedTower.level;
+        var index = selectedTower.index;
+        selectedTower.damage = tower_damage[index][level];
+        selectedTower.range = tower_range[index][level];
+        selectedTower.interval = tower_interval[index][level];
+        if (selectedTower.type == "Ice") {
+          selectedTower.slow = slow[0][level];
+          selectedTower.slow_duration = slow[1][level];
+        }
+        if (selectedTower.type == "Cannon") {
+          selectedTower.splash_damage = splash[0][level];
+          selectedTower.splash_radius = splash[1][level];
+        }
+        refreshTowerDetails(selectedTower);
+        $("#gold").text(gold);
+        updateBuyable();
+        if ($("#range").attr("visibility") == "visible") {
+            if(($("#range").attr("cx") == selectedTower.cx) && ($("#range").attr("cy") == selectedTower.cy)) {
+              showRange(selectedTower);
+            }
+        }
+      }
+      function getUpgradePrice(tower) {
+        if (tower == null) {
+          return -1;
+        }
+        if (tower.level >= max_level) {
+          return -1;
+        }
+        var index = tower.index;
+        var upgrade_price = tower_price[index][tower.level + 1];
+        return upgrade_price;
+      }
+      function sellTower(e) {
+        if (selectedTower == null) {
+          alert("hax");
+          return;
+        }
+        var sale_price = getSalePrice(selectedTower);
+
+        gold += sale_price;
+        $("#gold").text(gold);
+        //TODO: delete the tower
+        grid_array[selectedTower.grid_x][selectedTower.grid_y] = 0;
+        var temp = selectedTower.svg.parentNode;
+        temp.removeChild(selectedTower.svg);
+        building = false;
+        $("#selection").attr("visibility", "hidden");
+        $("#range").attr("visibility", "hidden");
+        $("#buy_" + building_type).attr("stroke-width", 1);
+        clearSelection();
+      }
+      function getSalePrice(tower) {
+        var index = tower.index;
+        var level = tower.level;
+        var total = 0;
+        for (var i = 0; i <= level; i++) {
+          total += tower_price[index][i];
+        }
+        return sell_ratio * total;
+      }
+    </script>
+    <style>
+      .button {
+        cursor:pointer;
+      }
+      .label {
+        pointer-events: none;
+      }
+    </style>
+    <svg id="mySVG" height="520" width="1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        <!--<radialGradient id="gradient_unselected"
+           cx="50%" cy="50%" r="100%"
+           spreadMethod="pad">
+
+          <stop offset="0%" stop-color="rgb(120, 169, 237)" stop-opacity="1" />
+          <stop offset="80%" stop-color="rgb(129, 178, 246)" stop-opacity="1" />
+          <stop offset="100%"   stop-color="rgb(138, 187, 255)" stop-opacity="1"/>
+        </radialGradient>
+        <radialGradient id="gradient_selected"
+           cx="50%" cy="50%" r="100%"
+           spreadMethod="pad">
+          <stop offset="0%" stop-color="rgb(120, 169, 237)" stop-opacity="1" />
+          <stop offset="80%" stop-color="rgb(111, 160, 228)" stop-opacity="1" />
+          <stop offset="100%"   stop-color="rgb(20, 69, 137)" stop-opacity="1"/>
+        </radialGradient>-->
+        <rect id="priority_button" height="24" width="56" class="button priority" stroke="rgb(20, 69, 37)" stroke-width="1"></rect>
+        <polyline id="missile_Arrow" points="0,-4 1,-2 0,-4 0,3 1,4 -1,4 0,3 0,-4 -1,-2" stroke="rgb(55, 35, 30)" stroke-width="1"></polyline>
+        <g id="missile_Ice">
+          <g stroke="black" stroke-width="1.2">
+            <line x1="0" y1="-4" x2="0" y2="4"></line>
+            <line x1="3.464" y1="-2" x2="-3.464" y2="2"></line>
+            <line x1="3.464" y1="2" x2="-3.464" y2="-2"></line>
+          </g>
+          <g stroke="rgb(69, 87, 120)" stroke-width="1">
+            <line x1="0" y1="-4" x2="0" y2="4"></line>
+            <line x1="3.464" y1="-2" x2="-3.464" y2="2"></line>
+            <line x1="3.464" y1="2" x2="-3.464" y2="-2"></line>
+          </g>
+        </g>
+<!--        <polyline id="missile_Ice" points="0,-4 0,0 3.464,-2 0,0 3.464,2 0,0 0,4 0,0 -3.464,2 0,0 -3.464,-2" stroke="black" stroke-width="1"></polyline>-->
+        <circle id="missile_Cannon" cx="0" cy="0" r="7" fill="black"></circle>
+        <g id="missile_Assassin">
+          <polygon points="0,-6 2,-2 6,0 2,2 0,6 -2,2 -6,0 -2,-2 0,-6" stroke="black" stroke-width="1" fill="rgb(120,120,120)"></polygon>
+<!--          <circle r="0.5" cx="0" cy="0" fill="white"></circle>-->
+        </g>
+      </defs>
+      <circle id="range"></circle>
+      <rect id="field" x="0" y="0" height="520" width="800" fill="rgb(50, 120, 50)" stroke-width="0"></rect>
+      <rect id="tower_details_pane" x="801" y="0" height="520" width="199" fill="rgb(200, 200, 200)" stroke="black" stroke-width="2"></rect>
+      <g id="shop_group">
+        <text x="900" y="24" text-anchor="middle" font-size="24" font-family="Helvetica">Shop</text>
+        <text x="810" y="42" text-anchor="left" font-size="12" font-family="Helvetica">Towers</text>
+        <rect id="buy_Arrow" x="810" y="48" height="24" width="24" fill="rgb(110, 70, 60)" class="button buy" stroke="black" stroke-width="1" onclick="clickBuy(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+          <!--<title>Shortcut: 1</title>-->
+        </rect>
+        <rect id="buy_Ice" x="844" y="48" height="24" width="24" fill="rgb(85, 115, 170)" class="button buy" stroke="black" stroke-width="1" onclick="clickBuy(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: 2</title>-->
+        </rect>
+        <rect id="buy_Cannon" x="878" y="48" height="24" width="24" fill="rgb(100, 100, 100)" class="button buy" stroke="black" stroke-width="1" onclick="clickBuy(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: 3</title>-->
+        </rect>
+        <rect id="buy_Assassin" x="912" y="48" height="24" width="24" fill="rgb(0, 100, 0)" class="button buy" stroke="black" stroke-width="1" onclick="clickBuy(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: 3</title>-->
+        </rect>
+      </g>
+      <line x1="800" y1="192" x2="1000" y2="192" stroke="black" stroke-width="2"></line>
+      <g id="tower_details_group" visibility="hidden">
+        <text id="tower_details_name" x="900" y="218" text-anchor="middle" font-size="24" font-family="Helvetica" class="label"></text>
+        <text id="tower_details_damage" x="810" y="242" text-anchor="left" font-size="12" font-family="Helvetica" class="label"></text>
+        <text id="tower_details_range" x="810" y="260" text-anchor="left" font-size="12" font-family="Helvetica" class="label"></text>
+        <text id="tower_details_rate" x="810" y="278" text-anchor="left" font-size="12" font-family="Helvetica" class="label"></text>
+        <text id="tower_details_shots" x="810" y="296" text-anchor="left" font-size="12" font-family="Helvetica" class="label"></text>
+        <text id="tower_details_kills" x="810" y="314" text-anchor="left" font-size="12" font-family="Helvetica" class="label"></text>
+        <text id="tower_details_special" x="810" y="332" text-anchor="left" font-size="12" font-family="Helvetica">Special:</text>
+        <use id="priority_closest_button" xlink:href="#priority_button" x="810" y="338" fill="rgb(120, 169, 237)" onclick="clickPriority(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: Shift+U</title>-->
+        </use>
+        <use id="priority_farthest_button" xlink:href="#priority_button" x="810" y="369" fill="rgb(120, 169, 237)" onclick="clickPriority(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: Shift+I</title>-->
+        </use>
+        <use id="priority_first_button" xlink:href="#priority_button" x="872" y="338" fill="rgb(120, 169, 237)" onclick="clickPriority(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: Shift+O</title>-->
+        </use>
+        <use id="priority_last_button" xlink:href="#priority_button" x="872" y="369" fill="rgb(120, 169, 237)" onclick="clickPriority(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: Shift+J</title>-->
+        </use>
+        <use id="priority_strongest_button" xlink:href="#priority_button" x="934" y="338" fill="rgb(120, 169, 237)" onclick="clickPriority(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: Shift+K</title>-->
+        </use>
+        <use id="priority_weakest_button" xlink:href="#priority_button" x="934" y="369" fill="rgb(120, 169, 237)" onclick="clickPriority(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--          <title>Shortcut: Shift+L</title>-->
+        </use>
+        <text id="priority_closest_text" x="838" y="354" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">Closest</text>
+        <text id="priority_farthest_text" x="838" y="385" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">Farthest</text>
+        <text id="priority_first_text" x="900" y="354" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">First</text>
+        <text id="priority_last_text" x="900" y="385" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">Last</text>
+        <text id="priority_strongest_text" x="962" y="354" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">Highest HP</text>
+        <text id="priority_weakest_text" x="962" y="385" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">Lowest HP</text>
+        <!--<rect id="priority_closest_button" x="810" y="192" height="24" width="60" fill="rgb(100, 149, 237" class="button"></rect>-->
+        <!--<image xlink:href="upgrade.png" x="950" y="230" height="24" width="24" stroke="black" stroke-width="1"/>-->
+        <g id="upgrade">
+          <rect id="upgrade" x="960" y="230" height="30" width="30" fill="rgb(120, 120, 120)" stroke="black" stroke-width="1.2" class="button upgrade" onclick="upgradeTower(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--            <title>Shortcut: U </title>-->
+          </rect>
+          <polygon points="975,235 986,245 980,245 980,255 970,255 970,245 964,245" fill="green" stroke="black" stroke-width="1" class="label"></polygon>
+          <text id="upgrade_price" x="975" y="272" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">12g</text>
+        </g>
+        <g id="sell">
+          <rect id="sell" x="960" y="284" height="30" width="30" fill="rgb(120, 120, 120)" stroke="black" stroke-width="1.2" class="button sell" onclick="sellTower(event)" onmouseover="mouseOverButton(event)" onmouseout="mouseLeaveButton(event)">
+<!--            <title>Shortcut: S</title>-->
+          </rect>
+          <text x="975" y="307" text-anchor="middle" font-size="24" font-family="Helvetica" font-weight="bold" stroke="black" stroke-width="0.8" fill="rgb(255,215,0)" class="label">$</text>
+          <text id="sale_price" x="975" y="326" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">12g</text>
+        </g>
+      </g>
+      <g id="minion_details_group" visibility="hidden">
+        <text id="minion_details_name" x="900" y="218" text-anchor="middle" font-size="24" font-family="Helvetica" class="label"></text>
+        <text x="810" y="250" text-anchor="left" font-size="16" font-family="Helvetica" class="label">HP:
+          <tspan id="minion_details_hp"></tspan>
+          <tspan id="minion_details_max_hp"></tspan>
+        </text>
+        <text x="810" y="272" text-anchor="left" font-size="16" font-family="Helvetica" class="label">Bounty:
+          <tspan id="minion_details_bounty" fill="rgb(205, 165, 0)"></tspan>
+        </text>
+        <text x="810" y="294" text-anchor="left" font-size="16" font-family="Helvetica" class="label">Speed:
+          <tspan id="minion_details_speed"></tspan>
+        </text>
+      </g>
+      <line x1="800" y1="405" x2="1000" y2="405" stroke="black" stroke-width="2"></line>
+      <g id="status_group">
+        <!--<text x="900" y="429" text-anchor="middle" font-size="24" font-family="Helvetica">Status</text>-->
+        <text id="level" x="810" y="435" text-anchor="left" font-size="24" font-family="Helvetica">Level: 0</text>
+        <text x="810" y="471" text-anchor="left" font-size="24" font-family="Helvetica">Gold:
+          <tspan id="gold" fill="rgb(205, 165, 0)">240</tspan>
+        </text>
+        <text x="810" y="507" text-anchor="left" font-size="24" font-family="Helvetica">Lives:
+          <tspan id="lives" fill="rgb(150, 0, 0)">20</tspan>
+        </text>
+
+      </g>
+      <rect id="selection" x="0" y="0" height="40" width="40" fill="white" opacity="0.7" stroke="black" stroke-width="1" visibility="hidden" class="button"></rect>
+      <path id="path" fill="none" stroke="rgb(175,150,75)" stroke-width="40"></path>
+      <g id="game_over_group" opacity="0.9" visibility="hidden">
+          <rect id="game_over_rect" x="0" y="0" height="520" width="1000" fill="rgb(80, 80, 80)"></rect>
+          <text x="400" y="212" text-anchor="middle" font-size="72" font-family="Helvetica" font-weight="bold" fill="red" stroke="black" stroke-width="1">GAME OVER</text>
+          <rect id="play_again" x="325" y="250" height="40" width="150" fill="rgb(0, 155, 0)" class="button" onclick="newGame()" stroke="black" stroke-width="1"></rect>
+          <text x="400" y="278" text-anchor="middle" font-size="24" font-family="Helvetica" font-weight="bold" fill="black" class="label">Play again</text>
+          <animate
+            id="game_over_anim"
+            attributeName="opacity"
+            from="0"
+            to="0.9"
+            dur="4s"
+            begin="indefinite">
+          </animate>
+        </g>
+      <!--<rect x="770" y="320" height="40" width="30" fill="rgb(175,150,75)"></rect>-->
+    </svg>
+  </body>
+</html>
