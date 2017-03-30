@@ -285,6 +285,7 @@
         var current_grid_y;
         var last_grid_y;
         path_start = getPathPoint(path_array, 0);
+        // console.log(path_start);
         last_p = path_start;
         last_grid_x = Math.floor((last_p.x + parseInt(path.getAttribute("stroke-width"))) / grid_increment) - 1;
         last_grid_y = Math.floor((last_p.y + parseInt(path.getAttribute("stroke-width"))) / grid_increment) - 1;
@@ -334,6 +335,7 @@
         path.setAttribute("d", path_d);
         path_len = path.getTotalLength();
         path_end = current_p;
+        // console.log(path_end);
 
         $(path).mousemove(function(e){
           mouseOverPath(e);

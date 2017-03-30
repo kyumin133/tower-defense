@@ -1,28 +1,58 @@
 .tower {
   height: 40px;
   width: 40px;
+  /*stroke: black;
+  stroke-width: 1px;
+  stroke-alignment: inner;*/
 }
+
+.tower:hover {
+  cursor: pointer;
+}
+
 .arrow {
   fill: rgb(110, 70, 60);
 }
 
+.arrow-selected {
+  fill: rgb(140, 100, 90);
+}
+
 .ice {
-  fill: rgb(85, 115, 70);
+  fill: rgb(85, 115, 170);
+}
+
+.ice-selected {
+  fill: rgb(115, 145, 200);
 }
 
 .cannon {
   fill: rgb(100, 100, 100);
 }
 
+.cannon-selected {
+  fill: rgb(130, 130, 130);
+}
+
 .assassin {
   fill: rgb(0, 100, 0);
 }
 
+.assassin-selected {
+  fill: rgb(0, 200, 0);
+}
 
+
+.path-background {
+  fill: none;
+  stroke: rgb(50, 120, 50);
+  stroke-width: 40px;
+}
 .path {
   fill: none;
   stroke: rgb(175, 150, 75);
-  stroke-width: 38px;
+  stroke-width: 40px;
+  stroke-linejoin: round;
 }
 
 .buy {
@@ -81,12 +111,93 @@
   width: 40px;
   /*fill: white;*/
   opacity: 0.7;
-  stroke: black;
-  stroke-width: 1px;
+  /*stroke: black;
+  stroke-width: 1px;*/
 }
 
 .range {
   fill: none;
   stroke: black;
   stroke-width: 1px;
+}
+
+.label {
+  text-anchor: left;
+  font-size: 12px;
+  font-family: Helvetica;
+}
+
+.name-label {
+  text-anchor: middle;
+  font-size: 24px;
+  font-family: Helvetica;
+}
+
+.priority {
+  height: 24px;
+  width: 56px;
+  stroke: rgb(20, 69, 37);
+  stroke-width: 1px;
+  fill:rgb(120, 169, 237);
+
+}
+
+.priority-text {
+  font-size: 10px;
+  text-anchor: middle;
+  font-family: Helvetica;
+  pointer-events: none;
+}
+
+.upgrade, .sell {
+  height: 30px;
+  width: 30px;
+  fill: rgb(120, 120, 120);
+  stroke: black;
+  stroke-width: 1.2px;
+}
+
+.sell-label {
+  text-anchor: middle;
+  font-size: 24px;
+  font-family: Helvetica;
+  font-weight: bold;
+  stroke: black;
+  stroke-width: 0.8px;
+  fill: rgb(255, 215, 0);
+  pointer-events: none;
+}
+
+.upgrade-arrow {
+  pointer-events: none;
+}
+
+.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.monster {
+  radius: 10px;
+  fill: rgb(92, 51, 23);
+  stroke: black;
+  stroke-width: 1px;
+}
+
+.monster:hover {
+  cursor: pointer;
+  fill: red;
+}
+
+.hidden-monster {
+  fill: red;
+  visibility: hidden;
+}
+
+.selected-monster {
+  fill: yellow;
+}
+
+.details {
+  pointer-events: none;
 }

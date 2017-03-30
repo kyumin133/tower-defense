@@ -8,9 +8,9 @@
   <script src="app/assets/javascripts/bundle.js"></script>
   <link rel="stylesheet" href="app/assets/stylesheets/main.css">
   <body>
-    <svg id="game" height="520" width="1000">
-      <rect id="field" x="0" y="0" height="520" width="800" fill="rgb(50, 120, 50)" stroke-width="0"></rect>
-      <rect id="tower_details_pane" x="801" y="0" height="520" width="199" fill="rgb(200, 200, 200)" stroke="black" stroke-width="2"></rect>
+    <svg id="game" height="520" width="1010">
+      <rect id="field" x="0" y="0" height="520" width="801" fill="rgb(50, 120, 50)"></rect>
+      <rect id="tower_details_pane" x="801" y="0" height="520" width="209" fill="rgb(200, 200, 200)"></rect>
       <g id="shop_group">
         <text x="900" y="36" text-anchor="middle" font-size="24" font-family="Helvetica">Shop</text>
         <text x="815" y="54" text-anchor="left" font-size="12" font-family="Helvetica">Towers</text>
@@ -22,6 +22,69 @@
         </rect>
         <rect id="buy_assassin" x="917" y="64" class="button buy assassin">
         </rect>
+      </g>
+      <g id="tower_details_group" visibility="hidden">
+        <text id="tower_details_name" x="900" y="168" class="name-label"></text>
+        <text id="tower_details_damage" x="815" y="192" class="label"></text>
+        <text id="tower_details_range" x="815" y="210" class="label"></text>
+        <text id="tower_details_rate" x="815" y="228" class="label"></text>
+        <text id="tower_details_shots" x="815" y="246" class="label"></text>
+        <text id="tower_details_kills" x="815" y="264" class="label"></text>
+        <text id="tower_details_special" x="815" y="282" class="label">Special:</text>
+
+        <rect id="priority_closest_button" class="button priority" x="815" y="298" />
+        <rect id="priority_farthest_button" class="button priority" x="815" y="329" />
+        <rect id="priority_first_button" class="button priority" x="877" y="298" />
+        <rect id="priority_last_button" class="button priority" x="877" y="329" />
+        <rect id="priority_strongest_button" class="button priority" x="939" y="298" />
+        <rect id="priority_weakest_button" class="button priority" x="939" y="329" />
+
+        <text id="priority_closest_text" x="843" y="314" class="priority-text">Closest</text>
+        <text id="priority_farthest_text" x="843" y="345" class="priority-text">Farthest</text>
+        <text id="priority_first_text" x="905" y="314" class="priority-text">First</text>
+        <text id="priority_last_text" x="905" y="345" class="priority-text">Last</text>
+        <text id="priority_strongest_text" x="967 " y="314" class="priority-text">Highest HP</text>
+        <text id="priority_weakest_text" x="967 " y="345" class="priority-text">Lowest HP</text>
+
+
+        <g id="upgrade">
+          <rect id="upgrade_button" x="965" y="180" class="button upgrade">
+          </rect>
+          <polygon points="980,185 991,195 985,195 985,205 975,205 975,195 969,195" fill="green" stroke="black" stroke-width="1" class="upgrade-arrow"></polygon>
+          <text id="upgrade_price" x="980" y="222" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">12g</text>
+        </g>
+        <g id="sell">
+          <rect id="sell_button" x="965" y="234" class="button sell">
+          </rect>
+          <text id="sell_label" x="980" y="257" class="sell-label">$</text>
+          <text id="sale_price" x="980" y="276" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">12g</text>
+        </g>
+      </g>
+
+      <g id="monster_details_group" visibility="hidden">
+        <text id="monster_details_name" x="900" y="218" text-anchor="middle" font-size="24" font-family="Helvetica" class="details"></text>
+        <text x="810" y="250" text-anchor="left" font-size="16" font-family="Helvetica" class="details">HP:
+          <tspan id="monster_details_hp"></tspan>
+          <tspan id="monster_details_max_hp"></tspan>
+        </text>
+        <text x="810" y="272" text-anchor="left" font-size="16" font-family="Helvetica" class="details">Bounty:
+          <tspan id="monster_details_bounty" fill="rgb(205, 165, 0)"></tspan>
+        </text>
+        <text x="810" y="294" text-anchor="left" font-size="16" font-family="Helvetica" class="details">Speed:
+          <tspan id="monster_details_speed"></tspan>
+        </text>
+      </g>
+
+
+      <g id="status_group">
+        <text id="level" x="815" y="435" text-anchor="left" font-size="24" font-family="Helvetica">Level: 0</text>
+        <text x="815" y="471" text-anchor="left" font-size="24" font-family="Helvetica">Gold:
+          <tspan id="gold" fill="rgb(205, 165, 0)">240</tspan>
+        </text>
+        <text x="815" y="507" text-anchor="left" font-size="24" font-family="Helvetica">Lives:
+          <tspan id="lives" fill="rgb(150, 0, 0)">20</tspan>
+        </text>
+
       </g>
     </svg>
   </body>
