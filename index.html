@@ -11,21 +11,49 @@
     <div class="game">
       <svg id="game" height="520" width="1010">
         <defs>
-          <polyline id="arrow_bullet" points="0,-4 1,-2 0,-4 0,3 1,4 -1,4 0,3 0,-4 -1,-2" stroke="black" stroke-width="1"></polyline>
-          <g id="ice_bullet">
+          <!-- <polyline id="arrow_bullet" points="0,-4 1,-2 0,-4 0,3 1,4 -1,4 0,3 0,-4 -1,-2" stroke="black" stroke-width="1"></polyline> -->
+          <g id="arrow_bullet" fill="transparent">
+            <rect stroke="black" stroke-width="0.3" fill="#855E42" x="-0.5" y="-6" height="20" width="1" />
+            <polygon fill="rgb(180, 180, 180)" stroke="black" stroke-width="0.3" points="0 -6, 1.5 -4.5, 0 -9, -1.5 -4.5, 0 -6" />
+            <polygon fill="rgb(17,105,9)" stroke="black" stroke-width="0.3" points="0 12, 2.5 14.5, 2.5 18.5, 0 16, -2.5 18.5, -2.5 14.5, 0, 12" />
+            <line stroke="black" stroke-width="0.3" x1="0" y1="12" x2="0" y2="16" />
+            <line stroke="black" stroke-width="0.3" x1="0" y1="14" x2="2.5" y2="16.5" />
+            <line stroke="black" stroke-width="0.3" x1="0" y1="14" x2="-2.5" y2="16.5" />
+          </g>
+
+          <g id="ice_bullet" fill="transparent">
             <g stroke="black" stroke-width="1.2">
-              <line x1="0" y1="-4" x2="0" y2="4"></line>
-              <line x1="3.464" y1="-2" x2="-3.464" y2="2"></line>
-              <line x1="3.464" y1="2" x2="-3.464" y2="-2"></line>
+              <line x1="0" y1="-8" x2="0" y2="8"></line>
+              <line x1="6.928" y1="-4" x2="-6.928" y2="4"></line>
+              <line x1="6.928" y1="4" x2="-6.928" y2="-4"></line>
+              <polyline points="2.309 -6.667, 0 -5.333, -2.309 -6.667" />
+              <polyline points="2.309 6.667, 0 5.333, -2.309 6.667" />
+              <polyline points="4.619 -5.333, 4.619 -2.667, 6.928 -1.333" />
+              <polyline points="4.619 5.333, 4.619 2.667, 6.928 1.333" />
+              <polyline points="-4.619 -5.333, -4.619 -2.667, -6.928 -1.333" />
+              <polyline points="-4.619 5.333, -4.619 2.667, -6.928 1.333" />
             </g>
-            <g stroke="rgb(69, 87, 120)" stroke-width="1">
-              <line x1="0" y1="-4" x2="0" y2="4"></line>
-              <line x1="3.464" y1="-2" x2="-3.464" y2="2"></line>
-              <line x1="3.464" y1="2" x2="-3.464" y2="-2"></line>
+            <g stroke="rgb(85, 115, 170)" stroke-width="1">
+              <line x1="0" y1="-8" x2="0" y2="8"></line>
+              <line x1="6.928" y1="-4" x2="-6.928" y2="4"></line>
+              <line x1="6.928" y1="4" x2="-6.928" y2="-4"></line>
+              <polyline points="2.309 -6.667, 0 -5.333, -2.309 -6.667" />
+              <polyline points="2.309 6.667, 0 5.333, -2.309 6.667" />
+              <polyline points="4.619 -5.333, 4.619 -2.667, 6.928 -1.333" />
+              <polyline points="4.619 5.333, 4.619 2.667, 6.928 1.333" />
+              <polyline points="-4.619 -5.333, -4.619 -2.667, -6.928 -1.333" />
+              <polyline points="-4.619 5.333, -4.619 2.667, -6.928 1.333" />
             </g>
           </g>
   <!--        <polyline id="missile_Ice" points="0,-4 0,0 3.464,-2 0,0 3.464,2 0,0 0,4 0,0 -3.464,2 0,0 -3.464,-2" stroke="black" stroke-width="1"></polyline>-->
-          <circle id="cannon_bullet" cx="0" cy="0" r="7" fill="black"></circle>
+
+          <g id="cannon_bullet">
+            <ellipse cx="0" cy="0" rx="8" ry="14" fill="yellow"></ellipse> -->
+            <ellipse cx="0" cy="-4" rx="7" ry="10" fill="orange"></ellipse>
+            <ellipse cx="0" cy="-7" rx="6" ry="7" fill="red"></ellipse>
+            <circle cx="0" cy="-9" r="5" fill="black"></circle>
+          </g>
+
           <g id="assassin_bullet">
             <polygon points="0,-6 2,-2 6,0 2,2 0,6 -2,2 -6,0 -2,-2 0,-6" stroke="black" stroke-width="1" fill="rgb(120,120,120)"></polygon>
   <!--          <circle r="0.5" cx="0" cy="0" fill="white"></circle>-->
@@ -38,7 +66,11 @@
 
           <rect id="ice_frame" height="40" width="40" x="-20" y="-20" class="ice" stroke="black" stroke-width="1"/>
 
-          <g id="ice_tower" fill="transparent" stroke="black" stroke-width="1" class="bow">
+          <g id="ice_tower" fill="transparent" stroke="black" stroke-width="1" class="bow"></g>
+
+          <rect id="cannon_frame" height="40" width="40" x="-20" y="-20" class="cannon" stroke="black" stroke-width="1"/>
+
+          <g id="cannon_tower" fill="transparent" stroke="black" stroke-width="1" class="bow">
           </g>
 
 
@@ -81,8 +113,8 @@
           </rect>
           <rect id="buy_cannon" x="883" y="64" class="button buy cannon">
           </rect>
-          <rect id="buy_assassin" x="917" y="64" class="button buy assassin">
-          </rect>
+          <!-- <rect id="buy_assassin" x="917" y="64" class="button buy assassin">
+          </rect> -->
         </g>
         <g id="tower_details_group" visibility="hidden">
           <text id="tower_details_name" x="900" y="168" class="name-label"></text>
@@ -93,7 +125,7 @@
           <text id="tower_details_kills" x="815" y="264" class="label"></text>
           <text id="tower_details_special" x="815" y="282" class="label">Special:</text>
 
-          <rect id="priority_closest_button" class="button priority" x="815" y="298" />
+          <!-- <rect id="priority_closest_button" class="button priority" x="815" y="298" />
           <rect id="priority_farthest_button" class="button priority" x="815" y="329" />
           <rect id="priority_first_button" class="button priority" x="877" y="298" />
           <rect id="priority_last_button" class="button priority" x="877" y="329" />
@@ -105,7 +137,7 @@
           <text id="priority_first_text" x="905" y="314" class="priority-text">First</text>
           <text id="priority_last_text" x="905" y="345" class="priority-text">Last</text>
           <text id="priority_strongest_text" x="967 " y="314" class="priority-text">Highest HP</text>
-          <text id="priority_weakest_text" x="967 " y="345" class="priority-text">Lowest HP</text>
+          <text id="priority_weakest_text" x="967 " y="345" class="priority-text">Lowest HP</text> -->
 
 
           <g id="upgrade">
@@ -149,7 +181,7 @@
         </g>
 
         <g id="game_over_group" opacity="0.9" visibility="hidden">
-            <rect id="game_over_rect" x="0" y="0" height="520" width="1000" fill="rgb(80, 80, 80)"></rect>
+            <rect id="game_over_rect" x="0" y="0" height="520" width="1010" fill="rgb(80, 80, 80)"></rect>
             <text x="400" y="212" text-anchor="middle" font-size="72" font-family="Helvetica" font-weight="bold" fill="red" stroke="black" stroke-width="1">GAME OVER</text>
             <rect id="play_again" x="325" y="250" height="40" width="150" fill="rgb(0, 155, 0)" class="button" stroke="black" stroke-width="1"></rect>
             <text x="400" y="278" text-anchor="middle" font-size="24" font-family="Helvetica" font-weight="bold" fill="black" class="unclickable">Play again</text>

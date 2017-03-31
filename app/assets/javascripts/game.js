@@ -808,6 +808,11 @@ class Game {
 
       if (monsterQueue.length <= 0) {
         window.cancelAnimationFrame(this.requestID);
+        for (let i = 0; i < this.bulletQueue.length; i++) {
+          let bullet = this.bulletQueue[i];
+          bullet.svg.parentNode.removeChild(bullet.svg);
+        }
+        this.bulletQueue = [];
         this.drawing = false;
       }
     }, this.frameLength);

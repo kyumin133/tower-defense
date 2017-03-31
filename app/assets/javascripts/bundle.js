@@ -883,6 +883,11 @@ class Game {
 
       if (monsterQueue.length <= 0) {
         window.cancelAnimationFrame(this.requestID);
+        for (let i = 0; i < this.bulletQueue.length; i++) {
+          let bullet = this.bulletQueue[i];
+          bullet.svg.parentNode.removeChild(bullet.svg);
+        }
+        this.bulletQueue = [];
         this.drawing = false;
       }
     }, this.frameLength);
@@ -904,7 +909,12 @@ class Game {
 
 "use strict";
 const SVGNS = "http://www.w3.org/2000/svg";
-const SPEED = 7;
+const SPEED = {
+  arrow: 7,
+  ice: 6,
+  cannon: 5
+};
+
 const XLINK_URL = "http://www.w3.org/1999/xlink";
 
 class Bullet {
@@ -912,6 +922,7 @@ class Bullet {
       this.game = game;
       this.tower = tower;
       this.target = target;
+      this.speed = SPEED[this.tower.type];
 
       let bulletPoint = document.createElementNS(SVGNS,"point");
 
@@ -966,8 +977,8 @@ class Bullet {
         //window.clearInterval(loop);
       } else {
         this.game.bulletQueue.push(this);
-        if (SPEED < r) { //haven't reached target yet
-          let scale = SPEED / r;
+        if (this.speed < r) { //haven't reached target yet
+          let scale = this.speed / r;
           let newX = oldX + dx * scale;
           let newY = oldY + dy * scale;
           //alert($(bullet).attr("transform") + " " + oldX + " " + oldY);
@@ -1018,6 +1029,9 @@ class Bullet {
         temp.removeChild(target.svg);
         // live_monsters--;
         this.tower.kills++;
+        if (this.tower === this.game.selectedTower) {
+          $("#tower_details_kills").text("Kills: " + this.tower.kills);
+        }
         this.game.updateGold(this.game.gold + target.bounty);
         this.game.updateBuyable();
 
@@ -1237,6 +1251,17 @@ class Tower {
     this.special = "none";
     this.startFrame = this.game.frame;
 
+
+
+    let svg = document.createElementNS(SVGNS, "g");
+    let frame = document.createElementNS(SVGNS, "use");
+    frame.setAttributeNS(XLINK_URL, "xlink:href", `#${this.type}_frame`);
+
+    let towerSvg = document.createElementNS(SVGNS, "g");
+    let towerChildSvg = document.createElementNS(SVGNS, "use");
+    towerChildSvg.setAttributeNS(XLINK_URL, "xlink:href", `#${this.type}_tower`);
+    towerSvg.appendChild(towerChildSvg);
+
     switch (type) {
       case "arrow":
         this.name = "Arrow";
@@ -1246,17 +1271,76 @@ class Tower {
         this.interval = [25, 23, 21, 19, 17];
         this.findTarget = () => (this.findFirstTarget());
         this.shootAnimation = () => (this.shootBowAnimation());
+
+        let bowstring1 = document.createElementNS(SVGNS, "line");
+        $(bowstring1).attr({
+          class: "bowstring",
+          x1: -2,
+          y1: -12,
+          x2: -2,
+          y2: 0
+        });
+
+        towerSvg.appendChild(bowstring1);
+        this.bowstring1 = bowstring1;
+
+        let bowstring2 = document.createElementNS(SVGNS, "line");
+        $(bowstring2).attr({
+          class: "bowstring",
+          x1: -2,
+          y1: 0,
+          x2: -2,
+          y2: 12
+        });
+        towerSvg.appendChild(bowstring2);
+        this.bowstring2 = bowstring2;
         break;
       case "ice":
         this.name = "Ice";
         this.damage = [40, 80, 160, 320, 640];
         this.range = [120, 140, 160, 180, 200];
         this.price = [60, 60, 120, 240, 480];
-        this.interval = [60, 55, 50, 45, 40];
+        this.interval = [40, 37, 34, 31, 28];
         this.slow = [[0.5, 100], [0.59, 120], [0.68, 140], [0.77, 160], [0.86, 200]]; // amount, duration
         this.special = "slow";
         this.findTarget = () => (this.findStrongestTarget());
         this.shootAnimation = () => (this.shootIceAnimation());
+
+        let iceRod = document.createElementNS(SVGNS, "line");
+        let iceHolder = document.createElementNS(SVGNS, "path");
+        let iceGem = document.createElementNS(SVGNS, "circle");
+
+        $(iceRod).attr({
+          x1: -15,
+          y1: 0,
+          x2: 7,
+          y2: 0,
+          class: "ice-rod"
+        });
+
+        $(iceHolder).attr({
+          d: "M 13 -6 A 6 6 0 0 0 13 6 L 13 6",
+          class: "ice-holder"
+        });
+
+        $(iceGem).attr({
+          cx: 13,
+          cy: 0,
+          r: 4,
+          fill: "rgb(165, 242, 243)",
+          class: "ice-gem"
+        });
+
+        iceHolder.setAttributeNS(XLINK_URL, "xlink:href", `#ice_holder`);
+        iceGem.setAttributeNS(XLINK_URL, "xlink:href", `#ice_gem`);
+
+        towerSvg.appendChild(iceRod);
+        towerSvg.appendChild(iceHolder);
+        towerSvg.appendChild(iceGem);
+
+        this.iceRod = iceRod;
+        this.iceHolder = iceHolder;
+        this.iceGem = iceGem;
         break;
       case "cannon":
         this.name = "Cannon";
@@ -1268,6 +1352,17 @@ class Tower {
         this.special = "splash";
         this.findTarget = () => (this.findClosestTarget());
         this.shootAnimation = () => (this.shootCannonAnimation());
+
+        let cannonBody = document.createElementNS(SVGNS, "path");
+
+        $(cannonBody).attr({
+          d: "M -16 4 C -16 4, -12 12, 12 4 L 12 -4 C 12 -4, -12 -12, -16 -4 L -16 4 Z",
+          fill: "black"
+        });
+
+        towerSvg.appendChild(cannonBody);
+        this.cannonBody = cannonBody;
+
         break;
       case "assassin":
         this.name = "Assassin";
@@ -1280,66 +1375,6 @@ class Tower {
         this.findTarget = () => (this.findWeakestTarget());
         this.shootAnimation = () => (this.shootAssassinAnimation());
         break;
-    }
-
-    let svg = document.createElementNS(SVGNS, "g");
-    let frame = document.createElementNS(SVGNS, "use");
-    frame.setAttributeNS(XLINK_URL, "xlink:href", `#${this.type}_frame`);
-
-    let towerSvg = document.createElementNS(SVGNS, "g");
-    let towerChildSvg = document.createElementNS(SVGNS, "use");
-    towerChildSvg.setAttributeNS(XLINK_URL, "xlink:href", `#${this.type}_tower`);
-    towerSvg.appendChild(towerChildSvg);
-
-    if (type === "arrow") {
-      let bowstring1 = document.createElementNS(SVGNS, "line");
-      bowstring1.setAttribute("class", "bowstring");
-      bowstring1.setAttribute("x1", -2);
-      bowstring1.setAttribute("y1", -12);
-      bowstring1.setAttribute("x2", -2);
-      bowstring1.setAttribute("y2", 0);
-      towerSvg.appendChild(bowstring1);
-      this.bowstring1 = bowstring1;
-
-      let bowstring2 = document.createElementNS(SVGNS, "line");
-      bowstring2.setAttribute("class", "bowstring");
-      bowstring2.setAttribute("x1", -2);
-      bowstring2.setAttribute("y1", 0);
-      bowstring2.setAttribute("x2", -2);
-      bowstring2.setAttribute("y2", 12);
-      towerSvg.appendChild(bowstring2);
-      this.bowstring2 = bowstring2;
-
-    } else if (type === "ice") {
-      let iceRod = document.createElementNS(SVGNS, "line");
-      let iceHolder = document.createElementNS(SVGNS, "path");
-      let iceGem = document.createElementNS(SVGNS, "circle");
-
-      iceRod.setAttribute("x1", -15);
-      iceRod.setAttribute("y1", 0);
-      iceRod.setAttribute("x2", 7);
-      iceRod.setAttribute("y2", 0);
-      iceRod.setAttribute("class", "ice-rod");
-
-      iceHolder.setAttribute("d", "M 13 -6 A 6 6 0 0 0 13 6 L 13 6");
-      iceHolder.setAttribute("class", "ice-holder");
-
-      iceGem.setAttribute("cx", 13);
-      iceGem.setAttribute("cy", 0);
-      iceGem.setAttribute("r", 4);
-      iceGem.setAttribute("fill", "rgb(165, 242, 243)");
-      iceGem.setAttribute("class", "ice-gem");
-
-      iceHolder.setAttributeNS(XLINK_URL, "xlink:href", `#ice_holder`);
-      iceGem.setAttributeNS(XLINK_URL, "xlink:href", `#ice_gem`);
-
-      towerSvg.appendChild(iceRod);
-      towerSvg.appendChild(iceHolder);
-      towerSvg.appendChild(iceGem);
-
-      this.iceRod = iceRod;
-      this.iceHolder = iceHolder;
-      this.iceGem = iceGem;
     }
 
     svg.appendChild(frame);
@@ -1485,6 +1520,10 @@ class Tower {
       this.updateAngle();
       let bullet = new __WEBPACK_IMPORTED_MODULE_0__bullet__["a" /* default */](this, target, this.game);
       this.shots++;
+      if (this === this.game.selectedTower) {
+        $("#tower_details_shots").text("Shots: " + this.shots);
+      }
+
       this.shooting = true;
       this.shootingFrame = 0;
     } else {
@@ -1528,6 +1567,16 @@ class Tower {
     this.iceGem.setAttribute("transform", `translate(${rodEnd - 7}, 0)`);
     // this.iceRod.setAttribute("transform", `scale(${scale})`);
     // this.iceRod.setAttribute("transform", `translate(${scale})`);
+  }
+
+  shootCannonAnimation() {
+    let x1 = -8 - 4 * (this.shootingFrame / 30);
+    let x2 = 16 - 4 * (this.shootingFrame / 30);
+
+    $(this.cannonBody).attr({
+      d: `M -16 4 C -16 4, ${x1} 12, ${x2} 4 L ${x2} -4 C ${x2} -4, ${x1} -12, -16 -4 L -16 4 Z`,
+      fill: "black"
+    });
   }
 
   updateAngle() {

@@ -1,5 +1,10 @@
 const SVGNS = "http://www.w3.org/2000/svg";
-const SPEED = 7;
+const SPEED = {
+  arrow: 7,
+  ice: 6,
+  cannon: 5
+};
+
 const XLINK_URL = "http://www.w3.org/1999/xlink";
 
 class Bullet {
@@ -7,6 +12,7 @@ class Bullet {
       this.game = game;
       this.tower = tower;
       this.target = target;
+      this.speed = SPEED[this.tower.type];
 
       let bulletPoint = document.createElementNS(SVGNS,"point");
 
@@ -61,8 +67,8 @@ class Bullet {
         //window.clearInterval(loop);
       } else {
         this.game.bulletQueue.push(this);
-        if (SPEED < r) { //haven't reached target yet
-          let scale = SPEED / r;
+        if (this.speed < r) { //haven't reached target yet
+          let scale = this.speed / r;
           let newX = oldX + dx * scale;
           let newY = oldY + dy * scale;
           //alert($(bullet).attr("transform") + " " + oldX + " " + oldY);
@@ -113,6 +119,9 @@ class Bullet {
         temp.removeChild(target.svg);
         // live_monsters--;
         this.tower.kills++;
+        if (this.tower === this.game.selectedTower) {
+          $("#tower_details_kills").text("Kills: " + this.tower.kills);
+        }
         this.game.updateGold(this.game.gold + target.bounty);
         this.game.updateBuyable();
 
