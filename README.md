@@ -52,7 +52,40 @@ Creating a new instance:
 
 ```
 #### Target Seeking
-Towers first determine 
+Towers determine the target they will shoot at using one of six priorities:
+- Closest to the tower
+- Farthest from the tower
+- Farthest along the path (closest to the path end)
+- Least far along the path (closest to the path start)
+- Highest HP
+- Lowest HP
+
+Each of these is a different function defined in `tower.js`. In each of these functions, the tower loops through all the monsters in the game (stored in `game.monsterQueue`). The tower identifies that monster within range that has the highest priority and then fires a bullet at the target.
+
+Bullets store a pointer to the target. Every frame, the bullet calculates the vector from its current location to its target's location and rotates itself using a transformation matrix. This way, the bullet is always pointing towards the target.
+
+```javascript
+  class Bullet() {
+    ...
+    updatePath(newX, newY) {
+      let dx = newX - this.x;
+      let dy = newY - this.y;
+
+      let theta = Math.PI / 2 + Math.atan2(dy, dx);
+
+      let ctm = this.svg.getCTM(); //transform matrix
+      ctm.a = Math.cos(theta);
+      ctm.b = Math.sin(theta);
+      ctm.c = -1 * Math.sin(theta);
+      ctm.d = Math.cos(theta);
+      ctm.e = newX;
+      ctm.f = newY;
+
+      $(this.svg).attr("transform", `matrix(${ctm.a}, ${ctm.b}, ${ctm.c}, ${ctm.d}, ${ctm.e}, ${ctm.f})`);
+    }
+    ...
+  }
+```
 
 ### Future Features
 - More tower types
