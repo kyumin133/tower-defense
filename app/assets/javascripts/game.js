@@ -9,14 +9,14 @@ const TOWERS = {
     price: 60,
     index: 1,
     description: "Low damage but high range and rate of fire.",
-    range: 120,
+    range: 140,
   },
   ice: {
     name: "Ice",
     price: 80,
     index: 2,
     description: "Medium damage, range, and rate of fire. Slows enemies.",
-    range: 100,
+    range: 120,
   },
   cannon: {
     name: "Cannon",
@@ -38,7 +38,7 @@ class Game {
   constructor() {
     this.$field = $("#field");
 
-    this.offset = this.$field.offset();
+    this.offset = $("#game").offset();
     this.grid = {
       increment: 40,
       height: 13,
@@ -59,11 +59,31 @@ class Game {
   }
 
   newGame() {
+    $("#game_over_group").attr("visibility", "hidden");
+    this.gameOver = false;
     this.updateGold(240)
     this.updateLives(20);
     this.updateLevel(0);
-    this.monsterQueue = [];
-    this.towerQueue = [];
+    this.updateBuyable();
+
+    this.monsterQueue = this.monsterQueue || [];
+    for (let i = 0; i < this.monsterQueue.length; i++) {
+      let monster = this.monsterQueue.shift();
+      monster.svg.parentNode.removeChild(monster.svg);
+    }
+
+    this.towerQueue = this.towerQueue || [];
+    for (let i = 0; i < this.towerQueue.length; i++) {
+      let tower = this.towerQueue.shift();
+      tower.svg.parentNode.removeChild(tower.svg);
+    }
+
+    this.bulletQueue = this.bulletQueue || [];
+    for (let i = 0; i < this.bulletQueue.length; i++) {
+      let bullet = this.bulletQueue.shift();
+      bullet.svg.parentNode.removeChild(bullet.svg);
+    }
+
     this.frame = 0;
   }
 
@@ -243,10 +263,14 @@ class Game {
       }
       if (e.keyCode === 32) {    //space
         if (!this.gameOver) {
+          if (!this.drawing) {
+            this.requestID = window.requestAnimationFrame(this.draw);
+          }
           this.spawnWave();
         }
         return;
       }
+
       // if ((e.shiftKey) && (e.keyCode == 85)) { //shift-U
       //   if (selectedTower != null) {
       //     clickPriority(null, $("#priority_closest_button"));
@@ -283,6 +307,7 @@ class Game {
       //   }
       //   return;
       // }
+
       if (e.keyCode === 49) { //1
         this.buy($("#buy_arrow"));
         return;
@@ -303,6 +328,7 @@ class Game {
         if (this.playing) {
           this.playing = false;
           window.cancelAnimationFrame(this.requestID);
+          this.drawing = false;
           return;
         } else {
           this.playing = true;
@@ -336,7 +362,7 @@ class Game {
     this.liveMonster += count;
     if (!this.playing) {
       this.playing = true;
-      this.requestID = window.requestAnimationFrame(this.draw);
+      // this.requestID = window.requestAnimationFrame(this.draw);
     }
   }
 
@@ -595,7 +621,7 @@ class Game {
     let width = this.grid.width;
     let height = this.grid.height;
 
-    let x = Math.floor((e.clientX - this.offset.top) / increment);
+    let x = Math.floor((e.clientX - this.offset.left) / increment);
     let y = Math.floor((e.clientY - this.offset.top) / increment);
 
     if (x >= width) {
@@ -659,6 +685,7 @@ class Game {
       if (upgradePrice > this.gold) {
         $("#upgrade").attr("class", "disabled");
       } else {
+        $("#upgrade").attr("class", "");
         $("#upgrade").attr("opacity", "1");
       }
     }
@@ -668,11 +695,12 @@ class Game {
     this.requestID = window.requestAnimationFrame(this.draw);
 
     window.setTimeout(() => {
-      // let bullet;
-      // for (let i = 0; i < bulletQueue.length; i++) {
-      //   bullet = bulletQueue.shift();
-      //   bullet.updatePath();
-      // }
+      this.drawing = true;
+      let bulletQueue = this.bulletQueue;
+      for (let i = 0; i < bulletQueue.length; i++) {
+        let bullet = bulletQueue.shift();
+        bullet.updatePath();
+      }
 
       // let len = this.monsterQueue.length;
       // let path = document.getElementById("path");
@@ -681,13 +709,14 @@ class Game {
       let monsterQueue = this.monsterQueue;
       for (let i = 0; i < monsterQueue.length; i++) {
         let monster = monsterQueue.shift();
-        if ((!monster.alive) || (monster.svg.getAttribute("class") == "hidden-monster")) {
+        if ((!monster.alive) || (monster.svg.getAttribute("visibility") === "hidden")) {
           if (monster.framesToSpawn > 1) {
             monster.framesToSpawn--;
             monsterQueue.push(monster);
             continue;
           } else if (monster.framesToSpawn == 1) {
             monster.alive = true;
+            monster.svg.setAttribute("visibility", "visible");
             monster.svg.setAttribute("class", "monster");
             monster.framesToSpawn--;
           } else {
@@ -712,9 +741,10 @@ class Game {
         // console.log(monster.stepLength);
         let p = this.path.getPointAtLength(monster.step);
         //alert(p.x + ", " + p.y + " (" + monster.stepLength + ")");
-        monster.svg.setAttribute("cx", p.x);
-        monster.svg.setAttribute("cy", p.y);
-        if (this.getDistance(p.x, p.y, this.pathEnd.x, this.pathEnd.y) <= monster.svg.getAttribute("r")) {      //reached the end
+
+        monster.moveTo(p.x, p.y);
+
+        if (this.getDistance(p.x, p.y, this.pathEnd.x, this.pathEnd.y) <= monster.r) {      //reached the end
           monster.svg.setAttribute("visibility", "hidden");
           if (!!this.selectedMonster) { //clear selection if selected
             if (monster.selected) {
@@ -726,18 +756,20 @@ class Game {
 
           if (this.lives === 0) {
             window.cancelAnimationFrame(this.requestID);
-            // this.gold = 0;
-            // updateBuyable();
-            // let game_over_group = document.getElementById("game_over_group");
-            // let temp = game_over_group.parentNode;
-            // temp.removeChild(game_over_group);
-            // temp.appendChild(game_over_group);
-            // $(game_over_group).attr("visibility", "visible");
-            // document.getElementById("game_over_anim").beginElement();
-            // playing = false;
-            // clearSelection();
-            // building = false;
-            // game_over = true;
+            this.drawing = false;
+            this.gold = 0;
+            this.updateBuyable();
+            let gameOverGroup = document.getElementById("game_over_group");
+            let temp = gameOverGroup.parentNode;
+            temp.removeChild(gameOverGroup);
+            temp.appendChild(gameOverGroup);
+            $(gameOverGroup).attr("visibility", "visible");
+            $("#play_again").on("click", () => { this.newGame(); });
+            document.getElementById("game_over_anim").beginElement();
+            this.playing = false;
+            this.clearSelection();
+            this.building = false;
+            this.gameOver = true;
           }
         } else {
           monsterQueue.push(monster);
@@ -754,11 +786,19 @@ class Game {
           tower.refreshTowerDetails();
         }
 
+        if (!!tower.target) {
+          tower.updateAngle();
+        }
+
         // console.log((this.frame - tower.startFrame) % tower.interval[tower.level]);
         // debugger;
         if ((this.frame - tower.startFrame) % tower.interval[tower.level] === 0) {
           // console.log(this.frame);
           tower.shoot();
+        }
+
+        if (tower.shooting) {
+          tower.updateShooting();
         }
       }
 
@@ -768,6 +808,7 @@ class Game {
 
       if (monsterQueue.length <= 0) {
         window.cancelAnimationFrame(this.requestID);
+        this.drawing = false;
       }
     }, this.frameLength);
   }

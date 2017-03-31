@@ -1,4 +1,5 @@
 const SVGNS = "http://www.w3.org/2000/svg";
+const XLINK_URL = "http://www.w3.org/1999/xlink";
 
 const BASE_HP = 100;
 const HP_INCREASE_RATIO = 1.25;
@@ -9,16 +10,23 @@ class Monster {
   constructor(level, index, game) {
     this.game = game;
 
-    let svg = document.createElementNS(SVGNS, "circle");
-    $(svg).attr("class", "hidden-monster");
-    svg.setAttribute("cx", game.pathStart.x);
-    svg.setAttribute("cy", game.pathStart.y);
-    svg.setAttribute("r", 10);
+    let svg = document.createElementNS(SVGNS, "use");
+    $(svg).attr("visibility", "hidden");
+    // let bulletProjectile = document.createElementNS(SVGNS, "use");
+    svg.setAttributeNS(XLINK_URL, "xlink:href", `#monster`);
+
+    this.x = game.pathStart.x;
+    this.y = game.pathStart.y;
+    this.r = 16;
+    // svg.setAttribute("x", this.x);
+    // svg.setAttribute("y", this.y);
+    // svg.setAttribute("r", this.r);
+    svg.setAttribute("transform", `translate(${this.x}, ${this.y})`);
 
     $("#game").append(svg);
     this.svg = svg;
 
-    this.maxHp = BASE_HP * (HP_INCREASE_RATIO ** (level - 1));
+    this.maxHp = Math.round(BASE_HP * (HP_INCREASE_RATIO ** (level - 1)));
     this.hp = this.maxHp;
 
     this.timeToFinish = 30000; //ms from beginning to end
@@ -26,6 +34,7 @@ class Monster {
     if (index === 0) {
       this.alive = true;
       svg.setAttribute("class", "monster");
+      svg.setAttribute("visibility", "visible")
 
     } else {
       this.alive = false;
@@ -41,7 +50,7 @@ class Monster {
     this.slowed = false;
     this.slowedAmount = 0;
 
-    this.bounty = BASE_BOUNTY * (BOUNTY_INCREASE_RATIO ** (level - 1));
+    this.bounty = Math.round(BASE_BOUNTY * (BOUNTY_INCREASE_RATIO ** (level - 1)));
     this.selected = false;
 
     this.game.monsterQueue.push(this);
@@ -50,8 +59,8 @@ class Monster {
       this.game.clearSelection();
       this.game.selectedMonster = this;
       this.selected = true;
-
-      $(this.svg).attr("class", "monster selected-monster");
+      
+      $(this.svg).attr("class", "selected-monster");
       let temp = this.svg.parentNode;
       temp.removeChild(this.svg);
       temp.appendChild(this.svg);
@@ -82,6 +91,30 @@ class Monster {
     $("#monster_details_bounty").text(this.bounty.toString() + "g");
     $("#monster_details_speed").text(Math.round(this.stepLength * 60));
     // $("#monster_details_group").attr("visibility", "visible");
+  }
+
+  moveTo(newX, newY) {
+    // monster.x = p.x
+    // monster.y = p.y
+    // console.log(`${monster.x}, ${monster.y}`);
+    // monster.svg.setAttribute("x", p.x);
+    // monster.svg.setAttribute("y", p.y);
+    let dx = newX - this.x;
+    let dy = newY - this.y;
+    let theta = Math.PI / 2 + Math.atan2(dy, dx);
+
+    let ctm = this.svg.getCTM();
+    ctm.a = Math.cos(theta);
+    ctm.b = Math.sin(theta);
+    ctm.c = -1 * Math.sin(theta);
+    ctm.d = Math.cos(theta);
+    ctm.e = newX;
+    ctm.f = newY;
+
+    $(this.svg).attr("transform", `matrix(${ctm.a}, ${ctm.b}, ${ctm.c}, ${ctm.d}, ${ctm.e}, ${ctm.f})`);
+    this.x = newX;
+    this.y = newY;
+    // monster.svg.setAttribute("transform", `translate(${monster.x}, ${monster.y})`);
   }
 }
 

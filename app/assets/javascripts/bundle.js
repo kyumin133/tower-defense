@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 1);
+/******/ 	return __webpack_require__(__webpack_require__.s = 2);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -71,409 +71,7 @@
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__bullet__ = __webpack_require__(4);
-
-
-const SVGNS = "http://www.w3.org/2000/svg";
-
-class Tower {
-  constructor(game, type, pos) {
-    this.level = 0;
-    this.game = game;
-    this.pos = pos;
-    this.type = type;
-    this.shots = 0;
-    this.kills = 0;
-    this.special = "none";
-    this.startFrame = this.game.frame;
-
-    switch (type) {
-      case "arrow":
-        this.name = "Arrow";
-        this.damage = [30, 60, 120, 240, 480];
-        this.range = [120, 140, 160, 180, 200];
-        this.price = [60, 60, 120, 240, 480];
-        this.interval = [40, 35, 30, 25, 20];
-        this.findTarget = () => (this.findFirstTarget());
-        break;
-      case "ice":
-        this.name = "Ice";
-        this.damage = [40, 80, 160, 320, 640];
-        this.range = [100, 120, 140, 160, 180];
-        this.price = [60, 60, 120, 240, 480];
-        this.interval = [60, 55, 50, 45, 40];
-        this.slow = [[0.3, 100], [0.45, 120], [0.6, 140], [0.75, 160], [0.85, 200]]; // amount, duration
-        this.special = "slow";
-        this.findTarget = () => (this.findStrongestTarget());
-        break;
-      case "cannon":
-        this.name = "Cannon";
-        this.damage = [100, 200, 400, 800, 1600];
-        this.range = [100, 115, 130, 145, 160];
-        this.price = [100, 100, 200, 400, 800];
-        this.interval = [120, 115, 110, 105, 100, 95];
-        this.splash = [[0.3, 50], [0.35, 55], [0.4, 60], [0.45, 65], [0.5, 70]]; // amount, radius
-        this.special = "splash";
-        this.findTarget = () => (this.findClosestTarget());
-        break;
-      case "assassin":
-        this.name = "Assassin";
-        this.damage = [10, 20, 40, 80, 160];
-        this.range = [120, 140, 160, 180, 200];
-        this.price = [150, 150, 300, 600, 1620];
-        this.interval = [120, 115, 110, 105, 100, 95];
-        this.percentMissing = [8, 11, 14, 17, 20];
-        this.special = "assassin";
-        this.findTarget = () => (this.findWeakestTarget());
-        break;
-    }
-
-    let svg = document.createElementNS(SVGNS, "rect");
-    svg.setAttribute("x", pos[0]);
-    svg.setAttribute("y", pos[1]);
-
-    let length = 40;
-    this.cx = this.pos[0] + 0.5 * length;
-    this.cy = this.pos[1] + 0.5 * length;
-
-    svg.setAttribute("id", `type_${pos[0]}_${pos[1]}}`);
-    svg.setAttribute("class", `tower ${type}`);
-    $("#game").append(svg);
-    this.svg = svg;
-
-    $(this.svg).on("click", (e) => {
-      this.handleClick(e);
-    })
-  }
-
-  handleClick(e) {
-    let game = this.game;
-    game.clearSelection(true);
-    game.selectedTower = this;
-
-    let oldClass = $(this.svg).attr("class");
-    $(this.svg).attr("class", `tower ${this.type}-selected`)
-
-    // if (!!this.selectedPriority) {
-    //   //$(selectedPriority).attr("fill","rgb(70, 119, 187)");
-    //   $(selectedPriority).attr("fill","rgb(120, 169, 237)");
-    // }
-    // let id = "priority_" + this.priority + "_button";
-    // selectedPriority = document.getElementById(id);
-    // $(selectedPriority).attr("fill","rgb(70, 119, 187)");
-
-    this.showRange();
-    this.refreshTowerDetails();
-    game.updateBuyable();
-  }
-
-  showRange() {
-    let range = this.game.$range;
-    range.attr("cx", this.cx)
-    range.attr("cy", this.cy)
-    range.attr("r", this.range[this.level]);;
-    range.attr("visibility", "visible")
-  }
-
-  refreshTowerDetails() {
-    let level = this.level;
-
-    $("#tower_details_name").text(this.name + " " + (level + 1));
-    if (this.type === "assassin") {
-      $("#tower_details_damage").text("Damage: " + this.percentMissing[level] + "% (min " + this.damage[level] + ")");
-    } else {
-      $("#tower_details_damage").text("Damage: " + this.damage[level]);
-    }
-    $("#tower_details_range").text("Range: " + this.range[level]);
-    let rate = (Math.round(600/this.interval[level])/10).toString() + "/sec";
-    $("#tower_details_rate").text("Rate of fire: " + rate);
-    $("#tower_details_shots").text("Shots: " + this.shots);
-    $("#tower_details_kills").text("Kills: " + this.kills);
-    $("#tower_details_special").text("Special: " + this.special);
-    $("#tower_details_group").attr("visibility", "visible");
-    let upgradePrice = this.price[level + 1];
-    if (!upgradePrice) {
-      $("#upgrade_price").text("--");
-    } else {
-      $("#upgrade_price").text(`${upgradePrice} g`);
-    }
-
-    this.getSalePrice();
-    $("#sale_price").text(`${this.salePrice} g`);
-  }
-
-  getSalePrice() {
-    let level = this.level;
-    let total = 0;
-    for (let i = 0; i <= level; i++) {
-      total += this.price[i];
-    }
-    this.salePrice = Math.round(0.6 * total);
-    return this.salePrice;
-  }
-
-  unselect() {
-    $(this.svg).attr("class", `tower ${this.type}`);
-    $("#tower_details_group").attr("visibility", "hidden");
-    this.game.selectedTower = null;
-  }
-
-  upgrade() {
-    if (this.level >= this.damage.length - 1) {
-      return;
-    }
-
-    if (this.game.gold < this.price[this.level + 1]) {
-      return;
-    }
-
-    let gold = this.game.gold - this.price[this.level + 1];
-    this.game.updateGold(gold);
-
-    this.level++;
-    this.showRange();
-    this.refreshTowerDetails();
-    this.game.updateBuyable();
-  }
-
-  sell() {
-    let gold = this.game.gold + this.getSalePrice();
-    this.game.updateGold(gold);
-
-    this.refreshTowerDetails();
-    this.svg.remove();
-    $("#tower_details_group").attr("visibility", "hidden");
-    this.game.updateBuyable();
-  }
-
-  shoot() {
-    if(this.game.monsterQueue.length === 0) {
-      return;
-    }
-
-    let target = this.findTarget();
-
-    if (!!target) {
-      // let bullet = new Bullet(this, target);
-      console.log(target);
-      this.shots++;
-    } else {
-      return;
-    }
-  }
-
-  findClosestTarget() {
-    let index = -1;
-    let p = document.getElementById("game").createSVGPoint();
-    let monsterQueue = this.game.monsterQueue;
-
-    let closestVal = 99999;
-
-    for(let  i = 0; i < monsterQueue.length; i++) {
-      let monster = monsterQueue[i];
-      if (!monster.alive) {
-        continue;
-      }
-
-      p.x = monster.svg.getAttribute("cx");
-      p.y = monster.svg.getAttribute("cy");
-
-      if(monster.svg.getAttribute("class") == "hidden-monster") {
-        continue;
-      }
-
-      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
-      if ((r < closestVal) && (r <= this.range)) {
-        closestVal = r;
-        index = i;
-      }
-    }
-
-    if (index === -1) {
-      return;
-    }
-    return monsterQueue[index];
-  }
-
-  findFarthestTarget() {
-    let index = -1;
-    let p = document.getElementById("game").createSVGPoint();
-    let monsterQueue = this.game.monsterQueue;
-
-    let farthestVal = -1;
-
-    for(let  i = 0; i < monsterQueue.length; i++) {
-      let monster = monsterQueue[i];
-      if (!monster.alive) {
-        continue;
-      }
-
-      p.x = monster.svg.getAttribute("cx");
-      p.y = monster.svg.getAttribute("cy");
-
-      if(monster.svg.getAttribute("class") == "hidden-monster") {
-        continue;
-      }
-
-      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
-      if ((r < farthestVal) && (r <= this.range)) {
-        farthestVal = r;
-        index = i;
-      }
-    }
-
-    if (index === -1) {
-      return;
-    }
-    return monsterQueue[index];
-  }
-
-  findFirstTarget() {
-    let index = -1;
-    let p = document.getElementById("game").createSVGPoint();
-    let monsterQueue = this.game.monsterQueue;
-
-    let highestStep = -1;
-
-    for(let  i = 0; i < monsterQueue.length; i++) {
-      let monster = monsterQueue[i];
-      if(!monster.alive) {
-        continue;
-      }
-
-      p.x = monster.svg.getAttribute("cx");
-      p.y = monster.svg.getAttribute("cy");
-
-      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
-      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r > this.range)) {
-        continue;
-      }
-      if (monster.step > highestStep) {
-        highestStep = monster.step;
-        index = i;
-      }
-    }
-
-    if (index === -1) {
-      return;
-    }
-    return monsterQueue[index];
-  }
-
-  findLastTarget() {
-    let index = -1;
-    let p = document.getElementById("game").createSVGPoint();
-    let monsterQueue = this.game.monsterQueue;
-
-    let lowestStep = 99999;
-
-    for(let  i = 0; i < monsterQueue.length; i++) {
-      let monster = monsterQueue[i];
-      if(!monster.alive) {
-        continue;
-      }
-
-      p.x = monster.svg.getAttribute("cx");
-      p.y = monster.svg.getAttribute("cy");
-      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r > this.range)) {
-        continue;
-      }
-      if (monster.step < lowestStep) {
-        lowestStep = monster.step;
-        index = i;
-      }
-    }
-
-    if (index === -1) {
-      return;
-    }
-    return monsterQueue[index];
-  }
-
-  findStrongestTarget() {
-    let index = -1;
-    let p = document.getElementById("game").createSVGPoint();
-    let monsterQueue = this.game.monsterQueue;
-
-    let highestHp = -1;
-
-    for(let  i = 0; i < monsterQueue.length; i++) {
-      let monster = monsterQueue[i];
-      if(!monster.alive) {
-        continue;
-      }
-
-      p.x = monster.svg.getAttribute("cx");
-      p.y = monster.svg.getAttribute("cy");
-      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r > this.range)) {
-        continue;
-      }
-      if (monster.hp > highestHp) {
-        highestHp = monster.hp;
-        index = i;
-      }
-    }
-
-    if (index === -1) {
-      return;
-    }
-    return monsterQueue[index];
-  }
-
-  findWeakestTarget() {
-    let index = -1;
-    let p = document.getElementById("game").createSVGPoint();
-    let monsterQueue = this.game.monsterQueue;
-
-    let lowestHp = 99999;
-
-    for(let  i = 0; i < monsterQueue.length; i++) {
-      let monster = monsterQueue[i];
-      if(!monster.alive) {
-        continue;
-      }
-
-      p.x = monster.svg.getAttribute("cx");
-      p.y = monster.svg.getAttribute("cy");
-      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r > this.range)) {
-        continue;
-      }
-      if (monster.hp < lowestHp) {
-        lowestHp = monster.hp;
-        index = i;
-      }
-    }
-
-    if (index === -1) {
-      return;
-    }
-    return monsterQueue[index];
-  }
-}
-
-/* harmony default export */ __webpack_exports__["a"] = (Tower);
-
-
-/***/ }),
-/* 1 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__game__ = __webpack_require__(2);
-
-
-$(document).ready(() => {
-  new __WEBPACK_IMPORTED_MODULE_0__game__["a" /* default */]();
-});
-
-
-/***/ }),
-/* 2 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__tower__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__tower__ = __webpack_require__(4);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__monster__ = __webpack_require__(3);
 
 
@@ -486,14 +84,14 @@ const TOWERS = {
     price: 60,
     index: 1,
     description: "Low damage but high range and rate of fire.",
-    range: 120,
+    range: 140,
   },
   ice: {
     name: "Ice",
     price: 80,
     index: 2,
     description: "Medium damage, range, and rate of fire. Slows enemies.",
-    range: 100,
+    range: 120,
   },
   cannon: {
     name: "Cannon",
@@ -515,7 +113,7 @@ class Game {
   constructor() {
     this.$field = $("#field");
 
-    this.offset = this.$field.offset();
+    this.offset = $("#game").offset();
     this.grid = {
       increment: 40,
       height: 13,
@@ -536,11 +134,31 @@ class Game {
   }
 
   newGame() {
+    $("#game_over_group").attr("visibility", "hidden");
+    this.gameOver = false;
     this.updateGold(240)
     this.updateLives(20);
     this.updateLevel(0);
-    this.monsterQueue = [];
-    this.towerQueue = [];
+    this.updateBuyable();
+
+    this.monsterQueue = this.monsterQueue || [];
+    for (let i = 0; i < this.monsterQueue.length; i++) {
+      let monster = this.monsterQueue.shift();
+      monster.svg.parentNode.removeChild(monster.svg);
+    }
+
+    this.towerQueue = this.towerQueue || [];
+    for (let i = 0; i < this.towerQueue.length; i++) {
+      let tower = this.towerQueue.shift();
+      tower.svg.parentNode.removeChild(tower.svg);
+    }
+
+    this.bulletQueue = this.bulletQueue || [];
+    for (let i = 0; i < this.bulletQueue.length; i++) {
+      let bullet = this.bulletQueue.shift();
+      bullet.svg.parentNode.removeChild(bullet.svg);
+    }
+
     this.frame = 0;
   }
 
@@ -720,10 +338,14 @@ class Game {
       }
       if (e.keyCode === 32) {    //space
         if (!this.gameOver) {
+          if (!this.drawing) {
+            this.requestID = window.requestAnimationFrame(this.draw);
+          }
           this.spawnWave();
         }
         return;
       }
+
       // if ((e.shiftKey) && (e.keyCode == 85)) { //shift-U
       //   if (selectedTower != null) {
       //     clickPriority(null, $("#priority_closest_button"));
@@ -760,6 +382,7 @@ class Game {
       //   }
       //   return;
       // }
+
       if (e.keyCode === 49) { //1
         this.buy($("#buy_arrow"));
         return;
@@ -780,6 +403,7 @@ class Game {
         if (this.playing) {
           this.playing = false;
           window.cancelAnimationFrame(this.requestID);
+          this.drawing = false;
           return;
         } else {
           this.playing = true;
@@ -813,7 +437,7 @@ class Game {
     this.liveMonster += count;
     if (!this.playing) {
       this.playing = true;
-      this.requestID = window.requestAnimationFrame(this.draw);
+      // this.requestID = window.requestAnimationFrame(this.draw);
     }
   }
 
@@ -1072,7 +696,7 @@ class Game {
     let width = this.grid.width;
     let height = this.grid.height;
 
-    let x = Math.floor((e.clientX - this.offset.top) / increment);
+    let x = Math.floor((e.clientX - this.offset.left) / increment);
     let y = Math.floor((e.clientY - this.offset.top) / increment);
 
     if (x >= width) {
@@ -1136,6 +760,7 @@ class Game {
       if (upgradePrice > this.gold) {
         $("#upgrade").attr("class", "disabled");
       } else {
+        $("#upgrade").attr("class", "");
         $("#upgrade").attr("opacity", "1");
       }
     }
@@ -1145,11 +770,12 @@ class Game {
     this.requestID = window.requestAnimationFrame(this.draw);
 
     window.setTimeout(() => {
-      // let bullet;
-      // for (let i = 0; i < bulletQueue.length; i++) {
-      //   bullet = bulletQueue.shift();
-      //   bullet.updatePath();
-      // }
+      this.drawing = true;
+      let bulletQueue = this.bulletQueue;
+      for (let i = 0; i < bulletQueue.length; i++) {
+        let bullet = bulletQueue.shift();
+        bullet.updatePath();
+      }
 
       // let len = this.monsterQueue.length;
       // let path = document.getElementById("path");
@@ -1158,13 +784,14 @@ class Game {
       let monsterQueue = this.monsterQueue;
       for (let i = 0; i < monsterQueue.length; i++) {
         let monster = monsterQueue.shift();
-        if ((!monster.alive) || (monster.svg.getAttribute("class") == "hidden-monster")) {
+        if ((!monster.alive) || (monster.svg.getAttribute("visibility") === "hidden")) {
           if (monster.framesToSpawn > 1) {
             monster.framesToSpawn--;
             monsterQueue.push(monster);
             continue;
           } else if (monster.framesToSpawn == 1) {
             monster.alive = true;
+            monster.svg.setAttribute("visibility", "visible");
             monster.svg.setAttribute("class", "monster");
             monster.framesToSpawn--;
           } else {
@@ -1189,9 +816,10 @@ class Game {
         // console.log(monster.stepLength);
         let p = this.path.getPointAtLength(monster.step);
         //alert(p.x + ", " + p.y + " (" + monster.stepLength + ")");
-        monster.svg.setAttribute("cx", p.x);
-        monster.svg.setAttribute("cy", p.y);
-        if (this.getDistance(p.x, p.y, this.pathEnd.x, this.pathEnd.y) <= monster.svg.getAttribute("r")) {      //reached the end
+
+        monster.moveTo(p.x, p.y);
+
+        if (this.getDistance(p.x, p.y, this.pathEnd.x, this.pathEnd.y) <= monster.r) {      //reached the end
           monster.svg.setAttribute("visibility", "hidden");
           if (!!this.selectedMonster) { //clear selection if selected
             if (monster.selected) {
@@ -1203,18 +831,20 @@ class Game {
 
           if (this.lives === 0) {
             window.cancelAnimationFrame(this.requestID);
-            // this.gold = 0;
-            // updateBuyable();
-            // let game_over_group = document.getElementById("game_over_group");
-            // let temp = game_over_group.parentNode;
-            // temp.removeChild(game_over_group);
-            // temp.appendChild(game_over_group);
-            // $(game_over_group).attr("visibility", "visible");
-            // document.getElementById("game_over_anim").beginElement();
-            // playing = false;
-            // clearSelection();
-            // building = false;
-            // game_over = true;
+            this.drawing = false;
+            this.gold = 0;
+            this.updateBuyable();
+            let gameOverGroup = document.getElementById("game_over_group");
+            let temp = gameOverGroup.parentNode;
+            temp.removeChild(gameOverGroup);
+            temp.appendChild(gameOverGroup);
+            $(gameOverGroup).attr("visibility", "visible");
+            $("#play_again").on("click", () => { this.newGame(); });
+            document.getElementById("game_over_anim").beginElement();
+            this.playing = false;
+            this.clearSelection();
+            this.building = false;
+            this.gameOver = true;
           }
         } else {
           monsterQueue.push(monster);
@@ -1231,11 +861,19 @@ class Game {
           tower.refreshTowerDetails();
         }
 
+        if (!!tower.target) {
+          tower.updateAngle();
+        }
+
         // console.log((this.frame - tower.startFrame) % tower.interval[tower.level]);
         // debugger;
         if ((this.frame - tower.startFrame) % tower.interval[tower.level] === 0) {
           // console.log(this.frame);
           tower.shoot();
+        }
+
+        if (tower.shooting) {
+          tower.updateShooting();
         }
       }
 
@@ -1245,6 +883,7 @@ class Game {
 
       if (monsterQueue.length <= 0) {
         window.cancelAnimationFrame(this.requestID);
+        this.drawing = false;
       }
     }, this.frameLength);
   }
@@ -1260,11 +899,200 @@ class Game {
 
 
 /***/ }),
+/* 1 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+const SVGNS = "http://www.w3.org/2000/svg";
+const SPEED = 7;
+const XLINK_URL = "http://www.w3.org/1999/xlink";
+
+class Bullet {
+    constructor(tower, target, game) {
+      this.game = game;
+      this.tower = tower;
+      this.target = target;
+
+      let bulletPoint = document.createElementNS(SVGNS,"point");
+
+      $(bulletPoint).attr("class", `${tower.type}-bullet`);
+      $(bulletPoint).attr("x", 0);
+      $(bulletPoint).attr("y", 0);
+
+      let bulletProjectile = document.createElementNS(SVGNS, "use");
+      bulletProjectile.setAttributeNS(XLINK_URL, "xlink:href", `#${tower.type}_bullet`);
+
+      let bullet = document.createElementNS(SVGNS, "g");
+      $(bullet).append(bulletPoint);
+      $(bullet).append(bulletProjectile);
+
+      this.cx = tower.cx;
+      this.cy = tower.cy;
+      $(bullet).attr("transform", `translate(${this.cx}, ${this.cy})`);
+
+      $("#game").append(bullet);
+
+      this.svg = bullet;
+      this.updatePath();
+    }
+
+    updatePath() {
+      let tower = this.tower;
+      let target = this.target;
+
+      let ctm = this.svg.getCTM();
+      let oldX = ctm.e;
+      let oldY = ctm.f;
+
+
+      let dx = target.x - oldX;
+      let dy = target.y - oldY;
+
+      let r = this.game.getDistance(target.x, target.y, oldX, oldY);
+
+      let theta = Math.PI / 2 + Math.atan2(dy, dx);
+
+      if (!target.alive) {
+        let temp = this.svg.parentNode;
+        temp.removeChild(this.svg);
+        // $(this.svg).remove();
+        return;
+      }
+      if (r <= target.r) {
+        this.onHit(false);
+        let temp = this.svg.parentNode;
+        temp.removeChild(this.svg);
+        // $(this.svg).remove();
+        //window.clearInterval(loop);
+      } else {
+        this.game.bulletQueue.push(this);
+        if (SPEED < r) { //haven't reached target yet
+          let scale = SPEED / r;
+          let newX = oldX + dx * scale;
+          let newY = oldY + dy * scale;
+          //alert($(bullet).attr("transform") + " " + oldX + " " + oldY);
+
+          ctm.a = Math.cos(theta);
+          ctm.b = Math.sin(theta);
+          ctm.c = -1 * Math.sin(theta);
+          ctm.d = Math.cos(theta);
+          ctm.e = newX;
+          ctm.f = newY;
+
+          //$(bullet).attr("transform", "rotate(" + theta + ") translate(" + newX + ", " + newY + ")");
+          $(this.svg).attr("transform", `matrix(${ctm.a}, ${ctm.b}, ${ctm.c}, ${ctm.d}, ${ctm.e}, ${ctm.f})`);
+          //$(bullet).attr("transform", "translate(" + newX + "," + newY + ")");
+          /*
+          bullet.setAttribute("cx", parseInt(bullet.getAttribute("cx")) + parseInt((dx * scale)));
+          bullet.setAttribute("cy", parseInt(bullet.getAttribute("cy")) + parseInt((dy * scale)));*/
+        } else { //reached target
+          this.cx = target.x;
+          this.cy = target.y;
+
+          this.svg.setAttribute("cx", this.cx);
+          this.svg.setAttribute("cy", this.cy);
+        }
+
+      }
+    }
+
+    onHit(isSplash, damage = this.tower.damage[this.tower.level], target = this.target) {
+      // let damage = this.tower.damage[this.tower.level];
+
+      if (this.tower.type === "assassin") {
+        let missingHp = target.maxHp - target.hp;
+        let percentDamage = Math.round(missingHp * this.tower.percentMissing[this.tower.level] * 0.01);
+        if (percentDamage > damage) {
+          damage = percentDamage;
+        }
+      }
+
+      target.hp -= damage;
+      target.svg.setAttribute("fill-opacity", 0.2 + (0.8 * target.hp / target.maxHp));
+      target.svg.setAttribute("stroke-opacity", 0.2 + (0.8 * target.hp / target.maxHp));
+
+      if (target.hp <= 0) {
+        target.alive = false;
+
+        let temp = target.svg.parentNode;
+        temp.removeChild(target.svg);
+        // live_monsters--;
+        this.tower.kills++;
+        this.game.updateGold(this.game.gold + target.bounty);
+        this.game.updateBuyable();
+
+        let monsterQueue = this.game.monsterQueue;
+        for(let i = 0; i < monsterQueue.length; i++) { //clean up monsterQueue
+          let monster = monsterQueue.shift();
+          if ((monster.alive) || (monster.framesToSpawn >= 1)) {
+            monsterQueue.push(monster);
+          }
+        }
+
+        if (target.selected) {
+          this.game.clearSelection();
+        }
+      } else {
+        if(!!this.tower.slow) {
+          let slow = this.tower.slow[this.tower.level];
+          target.slowed = true;
+          if (target.slowedAmount <= slow[0]) {
+            target.slowedAmount = slow[0];
+            target.slowedTimer = slow[1];
+          }
+        }
+      }
+
+      if ((!isSplash) && (!!this.tower.splash)) {
+        // let p = document.getElementById("mySVG").createSVGPoint();
+        // p.x = target.cx;
+        // p.y = target.cy;
+        let radius;
+        let monsterQueue = this.game.monsterQueue;
+        for(let i = 0; i < monsterQueue.length; i++) {
+          if (i === this) {
+            continue;
+          }
+
+          let monster = monsterQueue[i];
+          if (!monster.alive) {
+            continue;
+          }
+
+          let r = this.game.getDistance(monster.x, monster.y, target.x, target.y);
+          console.log(r);
+          if (r <= this.tower.splash[this.tower.level][1]) {
+            this.onHit(true, damage * this.tower.splash[this.tower.level][0], monster);
+          }
+        }
+      }
+    }
+}
+
+/* harmony default export */ __webpack_exports__["a"] = (Bullet);
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__game__ = __webpack_require__(0);
+
+
+$(document).ready(() => {
+  new __WEBPACK_IMPORTED_MODULE_0__game__["a" /* default */]();
+});
+
+
+/***/ }),
 /* 3 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 const SVGNS = "http://www.w3.org/2000/svg";
+const XLINK_URL = "http://www.w3.org/1999/xlink";
 
 const BASE_HP = 100;
 const HP_INCREASE_RATIO = 1.25;
@@ -1275,16 +1103,23 @@ class Monster {
   constructor(level, index, game) {
     this.game = game;
 
-    let svg = document.createElementNS(SVGNS, "circle");
-    $(svg).attr("class", "hidden-monster");
-    svg.setAttribute("cx", game.pathStart.x);
-    svg.setAttribute("cy", game.pathStart.y);
-    svg.setAttribute("r", 10);
+    let svg = document.createElementNS(SVGNS, "use");
+    $(svg).attr("visibility", "hidden");
+    // let bulletProjectile = document.createElementNS(SVGNS, "use");
+    svg.setAttributeNS(XLINK_URL, "xlink:href", `#monster`);
+
+    this.x = game.pathStart.x;
+    this.y = game.pathStart.y;
+    this.r = 16;
+    // svg.setAttribute("x", this.x);
+    // svg.setAttribute("y", this.y);
+    // svg.setAttribute("r", this.r);
+    svg.setAttribute("transform", `translate(${this.x}, ${this.y})`);
 
     $("#game").append(svg);
     this.svg = svg;
 
-    this.maxHp = BASE_HP * (HP_INCREASE_RATIO ** (level - 1));
+    this.maxHp = Math.round(BASE_HP * (HP_INCREASE_RATIO ** (level - 1)));
     this.hp = this.maxHp;
 
     this.timeToFinish = 30000; //ms from beginning to end
@@ -1292,6 +1127,7 @@ class Monster {
     if (index === 0) {
       this.alive = true;
       svg.setAttribute("class", "monster");
+      svg.setAttribute("visibility", "visible")
 
     } else {
       this.alive = false;
@@ -1307,7 +1143,7 @@ class Monster {
     this.slowed = false;
     this.slowedAmount = 0;
 
-    this.bounty = BASE_BOUNTY * (BOUNTY_INCREASE_RATIO ** (level - 1));
+    this.bounty = Math.round(BASE_BOUNTY * (BOUNTY_INCREASE_RATIO ** (level - 1)));
     this.selected = false;
 
     this.game.monsterQueue.push(this);
@@ -1316,8 +1152,8 @@ class Monster {
       this.game.clearSelection();
       this.game.selectedMonster = this;
       this.selected = true;
-
-      $(this.svg).attr("class", "monster selected-monster");
+      
+      $(this.svg).attr("class", "selected-monster");
       let temp = this.svg.parentNode;
       temp.removeChild(this.svg);
       temp.appendChild(this.svg);
@@ -1349,6 +1185,30 @@ class Monster {
     $("#monster_details_speed").text(Math.round(this.stepLength * 60));
     // $("#monster_details_group").attr("visibility", "visible");
   }
+
+  moveTo(newX, newY) {
+    // monster.x = p.x
+    // monster.y = p.y
+    // console.log(`${monster.x}, ${monster.y}`);
+    // monster.svg.setAttribute("x", p.x);
+    // monster.svg.setAttribute("y", p.y);
+    let dx = newX - this.x;
+    let dy = newY - this.y;
+    let theta = Math.PI / 2 + Math.atan2(dy, dx);
+
+    let ctm = this.svg.getCTM();
+    ctm.a = Math.cos(theta);
+    ctm.b = Math.sin(theta);
+    ctm.c = -1 * Math.sin(theta);
+    ctm.d = Math.cos(theta);
+    ctm.e = newX;
+    ctm.f = newY;
+
+    $(this.svg).attr("transform", `matrix(${ctm.a}, ${ctm.b}, ${ctm.c}, ${ctm.d}, ${ctm.e}, ${ctm.f})`);
+    this.x = newX;
+    this.y = newY;
+    // monster.svg.setAttribute("transform", `translate(${monster.x}, ${monster.y})`);
+  }
 }
 
 /* harmony default export */ __webpack_exports__["a"] = (Monster);
@@ -1359,11 +1219,522 @@ class Monster {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-class Bullet {
-  
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__bullet__ = __webpack_require__(1);
+
+
+const SVGNS = "http://www.w3.org/2000/svg";
+const XLINK_URL = "http://www.w3.org/1999/xlink";
+const PI = 3.14159;
+
+class Tower {
+  constructor(game, type, pos) {
+    this.level = 0;
+    this.game = game;
+    this.pos = pos;
+    this.type = type;
+    this.shots = 0;
+    this.kills = 0;
+    this.special = "none";
+    this.startFrame = this.game.frame;
+
+    switch (type) {
+      case "arrow":
+        this.name = "Arrow";
+        this.damage = [30, 60, 120, 240, 480];
+        this.range = [140, 160, 180, 200, 220];
+        this.price = [60, 60, 120, 240, 480];
+        this.interval = [25, 23, 21, 19, 17];
+        this.findTarget = () => (this.findFirstTarget());
+        this.shootAnimation = () => (this.shootBowAnimation());
+        break;
+      case "ice":
+        this.name = "Ice";
+        this.damage = [40, 80, 160, 320, 640];
+        this.range = [120, 140, 160, 180, 200];
+        this.price = [60, 60, 120, 240, 480];
+        this.interval = [60, 55, 50, 45, 40];
+        this.slow = [[0.5, 100], [0.59, 120], [0.68, 140], [0.77, 160], [0.86, 200]]; // amount, duration
+        this.special = "slow";
+        this.findTarget = () => (this.findStrongestTarget());
+        this.shootAnimation = () => (this.shootIceAnimation());
+        break;
+      case "cannon":
+        this.name = "Cannon";
+        this.damage = [150, 250, 400, 800, 1600];
+        this.range = [100, 120, 140, 160, 180];
+        this.price = [100, 100, 200, 400, 800];
+        this.interval = [115, 110, 105, 100, 95];
+        this.splash = [[0.4, 50], [0.45, 55], [0.5, 60], [0.55, 65], [0.6, 70]]; // amount, radius
+        this.special = "splash";
+        this.findTarget = () => (this.findClosestTarget());
+        this.shootAnimation = () => (this.shootCannonAnimation());
+        break;
+      case "assassin":
+        this.name = "Assassin";
+        this.damage = [10, 20, 40, 80, 160];
+        this.range = [120, 140, 160, 180, 200];
+        this.price = [150, 150, 300, 600, 1620];
+        this.interval = [120, 115, 110, 105, 100, 95];
+        this.percentMissing = [8, 11, 14, 17, 20];
+        this.special = "assassin";
+        this.findTarget = () => (this.findWeakestTarget());
+        this.shootAnimation = () => (this.shootAssassinAnimation());
+        break;
+    }
+
+    let svg = document.createElementNS(SVGNS, "g");
+    let frame = document.createElementNS(SVGNS, "use");
+    frame.setAttributeNS(XLINK_URL, "xlink:href", `#${this.type}_frame`);
+
+    let towerSvg = document.createElementNS(SVGNS, "g");
+    let towerChildSvg = document.createElementNS(SVGNS, "use");
+    towerChildSvg.setAttributeNS(XLINK_URL, "xlink:href", `#${this.type}_tower`);
+    towerSvg.appendChild(towerChildSvg);
+
+    if (type === "arrow") {
+      let bowstring1 = document.createElementNS(SVGNS, "line");
+      bowstring1.setAttribute("class", "bowstring");
+      bowstring1.setAttribute("x1", -2);
+      bowstring1.setAttribute("y1", -12);
+      bowstring1.setAttribute("x2", -2);
+      bowstring1.setAttribute("y2", 0);
+      towerSvg.appendChild(bowstring1);
+      this.bowstring1 = bowstring1;
+
+      let bowstring2 = document.createElementNS(SVGNS, "line");
+      bowstring2.setAttribute("class", "bowstring");
+      bowstring2.setAttribute("x1", -2);
+      bowstring2.setAttribute("y1", 0);
+      bowstring2.setAttribute("x2", -2);
+      bowstring2.setAttribute("y2", 12);
+      towerSvg.appendChild(bowstring2);
+      this.bowstring2 = bowstring2;
+
+    } else if (type === "ice") {
+      let iceRod = document.createElementNS(SVGNS, "line");
+      let iceHolder = document.createElementNS(SVGNS, "path");
+      let iceGem = document.createElementNS(SVGNS, "circle");
+
+      iceRod.setAttribute("x1", -15);
+      iceRod.setAttribute("y1", 0);
+      iceRod.setAttribute("x2", 7);
+      iceRod.setAttribute("y2", 0);
+      iceRod.setAttribute("class", "ice-rod");
+
+      iceHolder.setAttribute("d", "M 13 -6 A 6 6 0 0 0 13 6 L 13 6");
+      iceHolder.setAttribute("class", "ice-holder");
+
+      iceGem.setAttribute("cx", 13);
+      iceGem.setAttribute("cy", 0);
+      iceGem.setAttribute("r", 4);
+      iceGem.setAttribute("fill", "rgb(165, 242, 243)");
+      iceGem.setAttribute("class", "ice-gem");
+
+      iceHolder.setAttributeNS(XLINK_URL, "xlink:href", `#ice_holder`);
+      iceGem.setAttributeNS(XLINK_URL, "xlink:href", `#ice_gem`);
+
+      towerSvg.appendChild(iceRod);
+      towerSvg.appendChild(iceHolder);
+      towerSvg.appendChild(iceGem);
+
+      this.iceRod = iceRod;
+      this.iceHolder = iceHolder;
+      this.iceGem = iceGem;
+    }
+
+    svg.appendChild(frame);
+    towerSvg.setAttribute("transform", "rotate(225)");
+    svg.appendChild(towerSvg);
+
+    svg.setAttribute("transform", `translate(${pos[0] + 20}, ${pos[1] + 20})`);
+    let length = 40;
+    this.cx = this.pos[0] + 0.5 * length;
+    this.cy = this.pos[1] + 0.5 * length;
+
+    // svg.setAttribute("id", `type_${pos[0]}_${pos[1]}}`);
+    // svg.setAttribute("class", `tower ${type}`);
+    $("#game").append(svg);
+    this.svg = svg;
+    this.towerSvg = towerSvg;
+
+    $(this.svg).on("click", (e) => {
+      this.handleClick(e);
+    })
+  }
+
+  handleClick(e) {
+    let game = this.game;
+    game.clearSelection(true);
+    game.selectedTower = this;
+
+    let oldClass = $(this.svg).attr("class");
+    // $(this.svg).attr("class", `tower ${this.type}-selected`)
+
+    // if (!!this.selectedPriority) {
+    //   //$(selectedPriority).attr("fill","rgb(70, 119, 187)");
+    //   $(selectedPriority).attr("fill","rgb(120, 169, 237)");
+    // }
+    // let id = "priority_" + this.priority + "_button";
+    // selectedPriority = document.getElementById(id);
+    // $(selectedPriority).attr("fill","rgb(70, 119, 187)");
+
+    this.showRange();
+    this.refreshTowerDetails();
+    game.updateBuyable();
+  }
+
+  showRange() {
+    let range = this.game.$range;
+    range.attr("cx", this.cx)
+    range.attr("cy", this.cy)
+    range.attr("r", this.range[this.level]);;
+    range.attr("visibility", "visible")
+  }
+
+  refreshTowerDetails() {
+    let level = this.level;
+
+    $("#tower_details_name").text(this.name + " " + (level + 1));
+    if (this.type === "assassin") {
+      $("#tower_details_damage").text("Damage: " + this.percentMissing[level] + "% (min " + this.damage[level] + ")");
+    } else {
+      $("#tower_details_damage").text("Damage: " + this.damage[level]);
+    }
+    $("#tower_details_range").text("Range: " + this.range[level]);
+    let rate = (Math.round(600/this.interval[level])/10).toString() + "/sec";
+    $("#tower_details_rate").text("Rate of fire: " + rate);
+    $("#tower_details_shots").text("Shots: " + this.shots);
+    $("#tower_details_kills").text("Kills: " + this.kills);
+    $("#tower_details_special").text("Special: " + this.special);
+    $("#tower_details_group").attr("visibility", "visible");
+    let upgradePrice = this.price[level + 1];
+    if (!upgradePrice) {
+      $("#upgrade_price").text("--");
+    } else {
+      $("#upgrade_price").text(`${upgradePrice} g`);
+    }
+
+    this.getSalePrice();
+    $("#sale_price").text(`${this.salePrice} g`);
+  }
+
+  getSalePrice() {
+    let level = this.level;
+    let total = 0;
+    for (let i = 0; i <= level; i++) {
+      total += this.price[i];
+    }
+    this.salePrice = Math.round(0.6 * total);
+    return this.salePrice;
+  }
+
+  unselect() {
+    $(this.svg).attr("class", `tower ${this.type}`);
+    $("#tower_details_group").attr("visibility", "hidden");
+    this.game.selectedTower = null;
+  }
+
+  upgrade() {
+    if (this.level >= this.damage.length - 1) {
+      return;
+    }
+
+    if (this.game.gold < this.price[this.level + 1]) {
+      return;
+    }
+
+    let gold = this.game.gold - this.price[this.level + 1];
+    this.game.updateGold(gold);
+
+    this.level++;
+    this.showRange();
+    this.refreshTowerDetails();
+    this.game.updateBuyable();
+  }
+
+  sell() {
+    let gold = this.game.gold + this.getSalePrice();
+    this.game.updateGold(gold);
+
+    this.refreshTowerDetails();
+    this.svg.remove();
+    $("#tower_details_group").attr("visibility", "hidden");
+    this.game.updateBuyable();
+
+    let index;
+    for (let i = 0; i < this.game.towerQueue.length; i++) {
+      let tower = this.game.towerQueue[i];
+      if (tower === this) {
+        index = i;
+        break;
+      }
+    }
+
+    this.game.towerQueue.splice(index, 1);
+  }
+
+  shoot() {
+    if(this.game.monsterQueue.length === 0) {
+      return;
+    }
+
+    let target = this.findTarget();
+
+    if (!!target) {
+      this.target = target;
+      this.updateAngle();
+      let bullet = new __WEBPACK_IMPORTED_MODULE_0__bullet__["a" /* default */](this, target, this.game);
+      this.shots++;
+      this.shooting = true;
+      this.shootingFrame = 0;
+    } else {
+      this.target = null;
+      this.shootingFrame = 60;
+      this.updateShooting();
+      return;
+    }
+  }
+
+  updateShooting() {
+    this.shootingFrame++;
+    if (this.shootingFrame > 30) {
+      this.shooting = false;
+      this.shootingFrame = 0;
+
+      if (this.type === "arrow") {
+        this.bowstring1.setAttribute("x2", -2);
+        this.bowstring2.setAttribute("x1", -2);
+      }
+      return;
+    }
+
+    this.shootAnimation();
+  }
+
+  shootBowAnimation() {
+    this.bowstring1.setAttribute("x2", -2 - 0.5 * this.shootingFrame);
+    this.bowstring2.setAttribute("x1", -2 - 0.5 * this.shootingFrame);
+  }
+
+  shootIceAnimation() {
+    let rodEnd = 3 + 4 * (1 - (this.shootingFrame / 30));
+    if (this.shootingFrame >= 30) {
+      // this.iceRod.setAttribute("x2", 7);
+      // this.iceHolder.setAttribute("transform", "translate(0, 0)");
+    } else {
+      this.iceRod.setAttribute("x2", rodEnd);
+    }
+    this.iceHolder.setAttribute("transform", `translate(${rodEnd - 7}, 0)`);
+    this.iceGem.setAttribute("transform", `translate(${rodEnd - 7}, 0)`);
+    // this.iceRod.setAttribute("transform", `scale(${scale})`);
+    // this.iceRod.setAttribute("transform", `translate(${scale})`);
+  }
+
+  updateAngle() {
+    if (!this.target) {
+      return;
+    }
+
+    let dx = this.target.x - this.cx;
+    let dy = this.target.y - this.cy;
+    let angle = Math.atan2(dy, dx) * 180 / PI;
+
+    this.towerSvg.setAttribute("transform", `rotate(${angle})`);
+  }
+
+  findClosestTarget() {
+    let index = -1;
+    let p = document.getElementById("game").createSVGPoint();
+    let monsterQueue = this.game.monsterQueue;
+
+    let closestVal = 99999;
+
+    for(let  i = 0; i < monsterQueue.length; i++) {
+      let monster = monsterQueue[i];
+      if (!monster.alive) {
+        continue;
+      }
+
+      p.x = monster.x;
+      p.y = monster.y;
+
+      if(monster.svg.getAttribute("class") == "hidden-monster") {
+        continue;
+      }
+
+      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
+      if ((r < closestVal) && (r - 10 <= this.range[this.level])) {
+        closestVal = r;
+        index = i;
+      }
+    }
+
+    if (index === -1) {
+      return;
+    }
+    return monsterQueue[index];
+  }
+
+  findFarthestTarget() {
+    let index = -1;
+    let p = document.getElementById("game").createSVGPoint();
+    let monsterQueue = this.game.monsterQueue;
+
+    let farthestVal = -1;
+
+    for(let  i = 0; i < monsterQueue.length; i++) {
+      let monster = monsterQueue[i];
+      if (!monster.alive) {
+        continue;
+      }
+
+      p.x = monster.x;
+      p.y = monster.y;
+
+      if(monster.svg.getAttribute("class") == "hidden-monster") {
+        continue;
+      }
+
+      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
+      if ((r < farthestVal) && (r - 10 <= this.range[this.level])) {
+        farthestVal = r;
+        index = i;
+      }
+    }
+
+    if (index === -1) {
+      return;
+    }
+    return monsterQueue[index];
+  }
+
+  findFirstTarget() {
+    let index = -1;
+    let p = document.getElementById("game").createSVGPoint();
+    let monsterQueue = this.game.monsterQueue;
+
+    let highestStep = -1;
+
+    for(let  i = 0; i < monsterQueue.length; i++) {
+      let monster = monsterQueue[i];
+      if(!monster.alive) {
+        continue;
+      }
+
+      p.x = monster.x;
+      p.y = monster.y;
+
+      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
+      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r - 10 > this.range[this.level])) {
+        continue;
+      }
+      if (monster.step > highestStep) {
+        highestStep = monster.step;
+        index = i;
+      }
+    }
+
+    if (index === -1) {
+      return;
+    }
+    return monsterQueue[index];
+  }
+
+  findLastTarget() {
+    let index = -1;
+    let p = document.getElementById("game").createSVGPoint();
+    let monsterQueue = this.game.monsterQueue;
+
+    let lowestStep = 99999;
+
+    for(let  i = 0; i < monsterQueue.length; i++) {
+      let monster = monsterQueue[i];
+      if(!monster.alive) {
+        continue;
+      }
+
+      p.x = monster.x;
+      p.y = monster.y;
+      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
+      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r - 10 > this.range[this.level])) {
+        continue;
+      }
+      if (monster.step < lowestStep) {
+        lowestStep = monster.step;
+        index = i;
+      }
+    }
+
+    if (index === -1) {
+      return;
+    }
+    return monsterQueue[index];
+  }
+
+  findStrongestTarget() {
+    let index = -1;
+    let p = document.getElementById("game").createSVGPoint();
+    let monsterQueue = this.game.monsterQueue;
+
+    let highestHp = -1;
+
+    for(let  i = 0; i < monsterQueue.length; i++) {
+      let monster = monsterQueue[i];
+      if(!monster.alive) {
+        continue;
+      }
+
+      p.x = monster.x;
+      p.y = monster.y;
+      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
+      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r - 10 > this.range[this.level])) {
+        continue;
+      }
+      if (monster.hp > highestHp) {
+        highestHp = monster.hp;
+        index = i;
+      }
+    }
+
+    if (index === -1) {
+      return;
+    }
+    return monsterQueue[index];
+  }
+
+  findWeakestTarget() {
+    let index = -1;
+    let p = document.getElementById("game").createSVGPoint();
+    let monsterQueue = this.game.monsterQueue;
+
+    let lowestHp = 99999;
+
+    for(let  i = 0; i < monsterQueue.length; i++) {
+      let monster = monsterQueue[i];
+      if(!monster.alive) {
+        continue;
+      }
+
+      p.x = monster.x;
+      p.y = monster.y;
+      let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
+      if ((monster.svg.getAttribute("class") == "hidden-monster") || (r - 10 > this.range[this.level])) {
+        continue;
+      }
+      if (monster.hp < lowestHp) {
+        lowestHp = monster.hp;
+        index = i;
+      }
+    }
+
+    if (index === -1) {
+      return;
+    }
+    return monsterQueue[index];
+  }
 }
 
-/* unused harmony default export */ var _unused_webpack_default_export = (Bullet);
+/* harmony default export */ __webpack_exports__["a"] = (Tower);
 
 
 /***/ })

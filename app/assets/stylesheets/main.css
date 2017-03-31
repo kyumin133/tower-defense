@@ -19,7 +19,7 @@
 }
 
 .ice {
-  fill: rgb(85, 115, 170);
+  fill: rgb(135, 165, 220);
 }
 
 .ice-selected {
@@ -194,10 +194,78 @@
   visibility: hidden;
 }
 
+.hidden-monster:hover {
+  cursor: pointer;
+}
+
 .selected-monster {
   fill: yellow;
+  stroke: yellow;
+}
+
+.selected-monster:hover {
+  cursor: pointer;
 }
 
 .details {
   pointer-events: none;
+}
+
+.arrow-bullet {
+
+}
+
+.ice-bullet {
+
+}
+
+.cannon-bullet {
+
+}
+
+.assassin-bullet {
+
+}
+
+.unclickable {
+  pointer-events: none;
+}
+
+.game {
+  display: flex;
+  justify-content: center;
+  width: auto;
+}
+
+.game svg {
+  border: 1px solid black;
+}
+
+body {
+  background-color: navajowhite;
+}
+
+
+.bow {
+  transition: 400ms linear;
+}
+
+.bowstring {
+  stroke-width: 1px;
+  stroke: #b69b4c;
+}
+
+.ice-rod {
+   stroke-width: 3px;
+   stroke: rgb(0, 50, 50);
+}
+
+.ice-holder {
+  fill: transparent;
+  stroke-width: 2px;
+  stroke: rgb(0, 50, 50);
+}
+
+.ice-gem {  
+  stroke: none;
 }
