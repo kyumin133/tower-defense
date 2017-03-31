@@ -3,10 +3,10 @@ const path = require('path');
 
 module.exports = {
   context: __dirname,
-  entry: './app/assets/javascripts/index.js',
+  entry: './lib/index.js',
 
   output: {
-    path: path.resolve(__dirname, 'app', 'assets', 'javascripts'),
+    path: path.resolve(__dirname, 'lib'),
     filename: 'bundle.js'
   },
   resolve: {
