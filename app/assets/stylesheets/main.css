@@ -1,3 +1,33 @@
+/*@import url('https://fonts.googleapis.com/css?family=Fondamento');*/
+/*@font-face {
+  font-family: Fondamento;
+  src: url('https://fonts.googleapis.com/css?family=Fondamento');
+}*/
+
+body {
+  background-color: navajowhite;
+  font-family: Fondamento;
+  overflow-x: hidden;
+}
+
+h1 {
+  text-align: center;
+  font-size: 36px;
+  margin: 10px;
+}
+
+.instructions {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+span {
+  text-align: center;
+  font-size: 16px;
+}
+
 .tower {
   height: 40px;
   width: 40px;
@@ -58,8 +88,8 @@
 .buy {
   stroke: black;
   stroke-width: 1;
-  height: 24px;
-  width: 24px;
+  height: 40px;
+  width: 40px;
 }
 
 .buy:hover {
@@ -96,7 +126,7 @@
 }
 
 .tooltip-text {
-  font-family: helvetica;
+  font-family: Fondamento;
   font-size: 10;
 }
 
@@ -124,13 +154,13 @@
 .label {
   text-anchor: left;
   font-size: 12px;
-  font-family: Helvetica;
+  font-family: Fondamento;
 }
 
 .name-label {
   text-anchor: middle;
   font-size: 24px;
-  font-family: Helvetica;
+  font-family: Fondamento;
 }
 
 .priority {
@@ -142,10 +172,14 @@
 
 }
 
+.selected-priority {
+  fill: rgb(70, 119, 187);
+}
+
 .priority-text {
   font-size: 10px;
   text-anchor: middle;
-  font-family: Helvetica;
+  font-family: Fondamento;
   pointer-events: none;
 }
 
@@ -160,10 +194,10 @@
 .sell-label {
   text-anchor: middle;
   font-size: 24px;
-  font-family: Helvetica;
+  font-family: Fondamento;
   font-weight: bold;
-  stroke: black;
-  stroke-width: 0.8px;
+  /*stroke: rgb(100, 70, 0);*/
+  /*stroke-width: 0.1px;*/
   fill: rgb(255, 215, 0);
   pointer-events: none;
 }
@@ -178,10 +212,10 @@
 }
 
 .monster {
-  radius: 10px;
+  /*radius: 10px;
   fill: rgb(92, 51, 23);
   stroke: black;
-  stroke-width: 1px;
+  stroke-width: 1px;*/
 }
 
 .monster:hover {
@@ -241,10 +275,6 @@
   border: 1px solid black;
 }
 
-body {
-  background-color: navajowhite;
-}
-
 
 .bow {
   transition: 400ms linear;
@@ -266,6 +296,10 @@ body {
   stroke: rgb(0, 50, 50);
 }
 
-.ice-gem {  
+.ice-gem {
   stroke: none;
+}
+
+.graphic {
+  pointer-events: none;
 }

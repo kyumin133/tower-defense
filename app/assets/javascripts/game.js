@@ -38,7 +38,6 @@ class Game {
   constructor() {
     this.$field = $("#field");
 
-    this.offset = $("#game").offset();
     this.grid = {
       increment: 40,
       height: 13,
@@ -165,6 +164,7 @@ class Game {
     selection.setAttribute("class", "button selection");
 
     let range = document.createElementNS(SVGNS, "circle");
+    range.setAttribute("id", "range");
     range.setAttribute("class", "range");
 
     $("#game").append(selection);
@@ -246,6 +246,19 @@ class Game {
         this.selectedTower.sell();
       }
     });
+
+    $(".priority").on("click", (e) => {
+      if (!this.selectedTower) {
+        return;
+      }
+      let newPriority = $(e.target).attr("id").replace(/priority_(\w+)_button/, "$1");
+      let oldPriority = this.selectedTower.priority;
+      if (newPriority === oldPriority) {
+        return;
+      }
+
+      this.selectedTower.setPriority(newPriority);
+    })
   }
 
   addKeyListeners() {
@@ -355,8 +368,16 @@ class Game {
   spawnWave(count = 10) {
     this.updateLevel(this.level + 1);
 
+    let randomRgbArr = [0, 0, 0];
+    for (let i = 0; i < randomRgbArr.length; i++) {
+      randomRgbArr[i] = Math.round(100 * Math.random());
+    }
+
+    let randomRgb = `rgb(${randomRgbArr.join(", ")})`;
+    // console.log(randomRgb);
+
     for(let i = 0; i < count; i++) {
-      new Monster(this.level, i, this);
+      new Monster(this.level, i, this, randomRgb);
     }
 
     this.liveMonster += count;
@@ -417,7 +438,17 @@ class Game {
   }
 
   clickBuy(e) {
-    this.buy(e.target);
+    let svg = e.target;
+    let id = $(svg).attr("id");
+    let type = id.slice(id.indexOf("_") + 1, id.length);
+
+    if (this.building) {
+      if (this.buildingType === type) {
+        this.clearSelection();
+        return;
+      }
+    }
+    this.buy(svg);
   }
 
   buy(svg) {
@@ -445,7 +476,10 @@ class Game {
     if ((this.building) && (keepCursorOn == undefined)) {
       this.building = false;
       $(`#buy_${this.buildingType}`).attr("class", `button buy ${this.buildingType}`);
+      $("#selection").attr("visibility", "hidden");
     }
+
+    $("#range").attr("visibility", "hidden");
   }
 
 
@@ -613,6 +647,8 @@ class Game {
     // range.attr("fill", tower.color)
     range.attr("r", tower.range);
     range.attr("visibility", "visible");
+
+    $("#game").append(range);
   }
 
   getGridCoordinates(e) {
@@ -621,8 +657,9 @@ class Game {
     let width = this.grid.width;
     let height = this.grid.height;
 
-    let x = Math.floor((e.clientX - this.offset.left) / increment);
-    let y = Math.floor((e.clientY - this.offset.top) / increment);
+    let offset = $("#game").offset();
+    let x = Math.floor((e.clientX - offset.left) / increment);
+    let y = Math.floor((e.clientY - offset.top) / increment);
 
     if (x >= width) {
       x = width - 1;
@@ -670,8 +707,10 @@ class Game {
       let tower = TOWERS[towerKey];
       if (tower.price > this.gold) {
         $(`#buy_${towerKey}`).attr("opacity", "0.3");
+        $(`#buy_${towerKey}_tower`).attr("opacity", "0.3");
       } else {
         $(`#buy_${towerKey}`).attr("opacity", "1");
+        $(`#buy_${towerKey}_tower`).attr("opacity", "1");
       }
     }
 

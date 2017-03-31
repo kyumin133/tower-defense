@@ -164,9 +164,9 @@ class Bullet {
           }
 
           let r = this.game.getDistance(monster.x, monster.y, target.x, target.y);
-          console.log(r);
+
           if (r <= this.tower.splash[this.tower.level][1]) {
-            this.onHit(true, damage * this.tower.splash[this.tower.level][0], monster);
+            this.onHit(true, Math.round(damage * this.tower.splash[this.tower.level][0]), monster);
           }
         }
       }

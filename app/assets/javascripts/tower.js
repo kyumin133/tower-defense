@@ -29,10 +29,11 @@ class Tower {
     switch (type) {
       case "arrow":
         this.name = "Arrow";
-        this.damage = [30, 60, 120, 240, 480];
+        this.damage = [20, 40, 80, 160, 320];
         this.range = [140, 160, 180, 200, 220];
         this.price = [60, 60, 120, 240, 480];
         this.interval = [25, 23, 21, 19, 17];
+        this.priority = "first";
         this.findTarget = () => (this.findFirstTarget());
         this.shootAnimation = () => (this.shootBowAnimation());
 
@@ -67,6 +68,7 @@ class Tower {
         this.interval = [40, 37, 34, 31, 28];
         this.slow = [[0.5, 100], [0.59, 120], [0.68, 140], [0.77, 160], [0.86, 200]]; // amount, duration
         this.special = "slow";
+        this.priority = "strongest";
         this.findTarget = () => (this.findStrongestTarget());
         this.shootAnimation = () => (this.shootIceAnimation());
 
@@ -111,9 +113,10 @@ class Tower {
         this.damage = [150, 250, 400, 800, 1600];
         this.range = [100, 120, 140, 160, 180];
         this.price = [100, 100, 200, 400, 800];
-        this.interval = [115, 110, 105, 100, 95];
+        this.interval = [85, 80, 75, 70, 65];
         this.splash = [[0.4, 50], [0.45, 55], [0.5, 60], [0.55, 65], [0.6, 70]]; // amount, radius
         this.special = "splash";
+        this.priority = "closest";
         this.findTarget = () => (this.findClosestTarget());
         this.shootAnimation = () => (this.shootCannonAnimation());
 
@@ -156,9 +159,26 @@ class Tower {
     this.svg = svg;
     this.towerSvg = towerSvg;
 
+    this.setPriority(this.priority, true);
+
     $(this.svg).on("click", (e) => {
       this.handleClick(e);
     })
+  }
+
+  setPriority(newPriority, initial = false) {
+    let priorities = ["closest", "farthest", "first", "last", "strongest", "weakest"];
+    for (let i = 0; i < priorities.length; i++) {
+      if (priorities[i] === newPriority) {
+        $(`#priority_${priorities[i]}_button`).attr("class", "priority selected-priority");
+      } else {
+        $(`#priority_${priorities[i]}_button`).attr("class", "button priority");
+      }
+    }
+
+    this.priority = newPriority;
+    let functionName = "find" + newPriority.charAt(0).toUpperCase() + newPriority.slice(1) + "Target";
+    this.findTarget = () => (this[functionName]() );
   }
 
   handleClick(e) {
@@ -173,9 +193,7 @@ class Tower {
     //   //$(selectedPriority).attr("fill","rgb(70, 119, 187)");
     //   $(selectedPriority).attr("fill","rgb(120, 169, 237)");
     // }
-    // let id = "priority_" + this.priority + "_button";
-    // selectedPriority = document.getElementById(id);
-    // $(selectedPriority).attr("fill","rgb(70, 119, 187)");
+    this.setPriority(this.priority, true);
 
     this.showRange();
     this.refreshTowerDetails();
@@ -188,6 +206,8 @@ class Tower {
     range.attr("cy", this.cy)
     range.attr("r", this.range[this.level]);;
     range.attr("visibility", "visible")
+
+    $("#game").append(range);
   }
 
   refreshTowerDetails() {
@@ -409,7 +429,7 @@ class Tower {
       }
 
       let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
-      if ((r < farthestVal) && (r - 10 <= this.range[this.level])) {
+      if ((r > farthestVal) && (r - 10 <= this.range[this.level])) {
         farthestVal = r;
         index = i;
       }

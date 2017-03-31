@@ -1,13 +1,13 @@
 const SVGNS = "http://www.w3.org/2000/svg";
 const XLINK_URL = "http://www.w3.org/1999/xlink";
 
-const BASE_HP = 100;
-const HP_INCREASE_RATIO = 1.25;
+const BASE_HP = 130;
+const HP_INCREASE_RATIO = 1.3;
 const BASE_BOUNTY = 10;
-const BOUNTY_INCREASE_RATIO = 1.15;
+const BOUNTY_INCREASE_RATIO = 1.1;
 
 class Monster {
-  constructor(level, index, game) {
+  constructor(level, index, game, color="#990000") {
     this.game = game;
 
     let svg = document.createElementNS(SVGNS, "use");
@@ -25,6 +25,8 @@ class Monster {
 
     $("#game").append(svg);
     this.svg = svg;
+    svg.setAttribute("fill", color);
+    svg.setAttribute("stroke", color);
 
     this.maxHp = Math.round(BASE_HP * (HP_INCREASE_RATIO ** (level - 1)));
     this.hp = this.maxHp;
@@ -59,7 +61,7 @@ class Monster {
       this.game.clearSelection();
       this.game.selectedMonster = this;
       this.selected = true;
-      
+
       $(this.svg).attr("class", "selected-monster");
       let temp = this.svg.parentNode;
       temp.removeChild(this.svg);

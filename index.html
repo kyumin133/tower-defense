@@ -8,8 +8,10 @@
   <script src="app/assets/javascripts/bundle.js"></script>
   <link rel="stylesheet" href="app/assets/stylesheets/main.css">
   <body>
+    <h1>BugDefense</h1>
     <div class="game">
       <svg id="game" height="520" width="1010">
+        <style type="text/css">@import url(http://fonts.googleapis.com/css?family=Fondamento);</style>
         <defs>
           <!-- <polyline id="arrow_bullet" points="0,-4 1,-2 0,-4 0,3 1,4 -1,4 0,3 0,-4 -1,-2" stroke="black" stroke-width="1"></polyline> -->
           <g id="arrow_bullet" fill="transparent">
@@ -59,16 +61,16 @@
   <!--          <circle r="0.5" cx="0" cy="0" fill="white"></circle>-->
           </g>
 
-          <rect id="arrow_frame" height="40" width="40" x="-20" y="-20" class="arrow" stroke="black" stroke-width="1"/>
+          <rect id="arrow_frame" height="39" width="39" x="-20" y="-20" class="arrow" />
           <g id="arrow_tower" fill="transparent" stroke="black" stroke-width="1" class="bow">
             <path d="M -2 -12 C -2 -12, 16 0, -2 12" stroke-width="1.5" stroke="#b69b4c"/>
           </g>
 
-          <rect id="ice_frame" height="40" width="40" x="-20" y="-20" class="ice" stroke="black" stroke-width="1"/>
+          <rect id="ice_frame" height="39" width="39" x="-20" y="-20" class="ice"/>
 
           <g id="ice_tower" fill="transparent" stroke="black" stroke-width="1" class="bow"></g>
 
-          <rect id="cannon_frame" height="40" width="40" x="-20" y="-20" class="cannon" stroke="black" stroke-width="1"/>
+          <rect id="cannon_frame" height="39" width="39" x="-20" y="-20" class="cannon" />
 
           <g id="cannon_tower" fill="transparent" stroke="black" stroke-width="1" class="bow">
           </g>
@@ -77,20 +79,20 @@
           <!-- <line id="bowstring1" x1="-2" y1="-12" x2="-2" y2="0" stroke="#b69b4c" class="firing-first"/>
           <line id="bowstring2" x1="-2" y1="0" x2="-2" y2="12" stroke="#b69b4c"  class="firing-second"/> -->
 
-          <g id="monster" stroke="#990000" fill="transparent">
-            <ellipse cx="0" cy="0" rx="5" ry="10" fill="#990000"/>
-            <path d="M 4.3 -5 C 4.3 -5, 8 -4, 11 -11" />
-            <path d="M -4.3 -5 C -4.3 -5, -8 -4, -11 -11" />
+          <g id="monster">
+            <ellipse cx="0" cy="0" rx="5" ry="10"/>
+            <path fill="transparent" d="M 4.3 -5 C 4.3 -5, 8 -4, 11 -11" />
+            <path fill="transparent" d="M -4.3 -5 C -4.3 -5, -8 -4, -11 -11" />
 
-            <path d="M 5 0 C 5 0, 6 2, 11 -1" />
-            <path d="M -5 0 C -5 0, -6 2, -11 -1" />
+            <path fill="transparent" d="M 5 0 C 5 0, 6 2, 11 -1" />
+            <path fill="transparent" d="M -5 0 C -5 0, -6 2, -11 -1" />
 
-            <path d="M 4.3 5 C 4.3 5, 8 4, 11 11" />
-            <path d="M -4.3 5 C -4.3 5, -8 4, -11 11" />
+            <path fill="transparent" d="M 4.3 5 C 4.3 5, 8 4, 11 11" />
+            <path fill="transparent" d="M -4.3 5 C -4.3 5, -8 4, -11 11" />
 
-            <circle cx="0" cy="-10" r="3" fill="#990000" />
-            <path d="M 2 -12 C 2 -12, 4 -16, 7 -17" />
-            <path d="M -2 -12 C -2 -12, -4 -16, -7 -17" />
+            <circle cx="0" cy="-10" r="3"/>
+            <path fill="transparent" d="M 2 -12 C 2 -12, 4 -16, 7 -17" />
+            <path fill="transparent" d="M -2 -12 C -2 -12, -4 -16, -7 -17" />
 
               <!-- <line x1="0" y1="-3" x2="8" y2="2" />
               <line x1="8" y1="2" x2="11" y2="-1" /> -->
@@ -105,14 +107,29 @@
         <rect id="field" x="0" y="0" height="520" width="801" fill="rgb(50, 120, 50)"></rect>
         <rect id="tower_details_pane" x="801" y="0" height="520" width="209" fill="rgb(200, 200, 200)"></rect>
         <g id="shop_group">
-          <text x="900" y="36" text-anchor="middle" font-size="24" font-family="Helvetica">Shop</text>
-          <text x="815" y="54" text-anchor="left" font-size="12" font-family="Helvetica">Towers</text>
-          <rect id="buy_arrow" x="815" y="64" class="button buy arrow">
+          <text x="900" y="36" text-anchor="middle" font-size="24" font-family="Fondamento">Shop</text>
+          <text x="815" y="59" text-anchor="left" font-size="16" font-family="Fondamento">Towers</text>
+          <rect id="buy_arrow" x="815" y="69" class="button buy arrow">
           </rect>
-          <rect id="buy_ice" x="849" y="64" class="button buy ice">
+          <g id="buy_arrow_tower" class="graphic">
+            <use xlink:href="#arrow_tower" x="835" y="89" />
+            <line x1="833" y1="77" x2="833" y2="101" stroke="#b69b4c" stroke-width="1" />
+          </g>
+
+          <rect id="buy_ice" x="865" y="69" class="button buy ice" />
+
+          <g id="buy_ice_tower" class="graphic">
+            <line class="ice-rod" x1="885" y1="83" x2="885" y2="104" />
+            <path class="ice-holder" d="M 891 78 A 6 6 0 0 1 879 78 L 879 78" />
+            <circle cx="885" cy="77" r="4" fill="rgb(165, 242, 243)" class="ice-gem" />
+          </g>
+
+          <rect id="buy_cannon" x="915" y="69" class="button buy cannon">
           </rect>
-          <rect id="buy_cannon" x="883" y="64" class="button buy cannon">
-          </rect>
+
+          <g id="buy_cannon_tower" class="graphic">
+            <path d="M 939 103 C 939 103, 947 99, 937 75 L 931 75 C 931 75, 923 99, 931 103 L 939 103 Z" fill="black" />
+          </g>
           <!-- <rect id="buy_assassin" x="917" y="64" class="button buy assassin">
           </rect> -->
         </g>
@@ -125,7 +142,7 @@
           <text id="tower_details_kills" x="815" y="264" class="label"></text>
           <text id="tower_details_special" x="815" y="282" class="label">Special:</text>
 
-          <!-- <rect id="priority_closest_button" class="button priority" x="815" y="298" />
+          <rect id="priority_closest_button" class="button priority" x="815" y="298" />
           <rect id="priority_farthest_button" class="button priority" x="815" y="329" />
           <rect id="priority_first_button" class="button priority" x="877" y="298" />
           <rect id="priority_last_button" class="button priority" x="877" y="329" />
@@ -137,44 +154,44 @@
           <text id="priority_first_text" x="905" y="314" class="priority-text">First</text>
           <text id="priority_last_text" x="905" y="345" class="priority-text">Last</text>
           <text id="priority_strongest_text" x="967 " y="314" class="priority-text">Highest HP</text>
-          <text id="priority_weakest_text" x="967 " y="345" class="priority-text">Lowest HP</text> -->
+          <text id="priority_weakest_text" x="967 " y="345" class="priority-text">Lowest HP</text>
 
 
           <g id="upgrade">
             <rect id="upgrade_button" x="965" y="180" class="button upgrade">
             </rect>
             <polygon points="980,185 991,195 985,195 985,205 975,205 975,195 969,195" fill="green" stroke="black" stroke-width="1" class="upgrade-arrow"></polygon>
-            <text id="upgrade_price" x="980" y="222" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">12g</text>
+            <text id="upgrade_price" x="980" y="222" text-anchor="middle" font-size="10" font-family="Fondamento" class="label">12g</text>
           </g>
           <g id="sell">
             <rect id="sell_button" x="965" y="234" class="button sell">
             </rect>
             <text id="sell_label" x="980" y="257" class="sell-label">$</text>
-            <text id="sale_price" x="980" y="276" text-anchor="middle" font-size="10" font-family="Helvetica" class="label">12g</text>
+            <text id="sale_price" x="980" y="276" text-anchor="middle" font-size="10" font-family="Fondamento" class="label">12g</text>
           </g>
         </g>
 
         <g id="monster_details_group" visibility="hidden">
-          <text id="monster_details_name" x="900" y="218" text-anchor="middle" font-size="24" font-family="Helvetica" class="details"></text>
-          <text x="810" y="250" text-anchor="left" font-size="16" font-family="Helvetica" class="details">HP:
+          <text id="monster_details_name" x="900" y="218" text-anchor="middle" font-size="24" font-family="Fondamento" class="details"></text>
+          <text x="810" y="250" text-anchor="left" font-size="16" font-family="Fondamento" class="details">HP:
             <tspan id="monster_details_hp"></tspan>
             <tspan id="monster_details_max_hp"></tspan>
           </text>
-          <text x="810" y="272" text-anchor="left" font-size="16" font-family="Helvetica" class="details">Bounty:
+          <text x="810" y="272" text-anchor="left" font-size="16" font-family="Fondamento" class="details">Bounty:
             <tspan id="monster_details_bounty" fill="rgb(205, 165, 0)"></tspan>
           </text>
-          <text x="810" y="294" text-anchor="left" font-size="16" font-family="Helvetica" class="details">Speed:
+          <text x="810" y="294" text-anchor="left" font-size="16" font-family="Fondamento" class="details">Speed:
             <tspan id="monster_details_speed"></tspan>
           </text>
         </g>
 
 
         <g id="status_group">
-          <text id="level" x="815" y="435" text-anchor="left" font-size="24" font-family="Helvetica">Level: 0</text>
-          <text x="815" y="471" text-anchor="left" font-size="24" font-family="Helvetica">Gold:
+          <text id="level" x="815" y="435" text-anchor="left" font-size="24" font-family="Fondamento">Level: 0</text>
+          <text x="815" y="471" text-anchor="left" font-size="24" font-family="Fondamento">Gold:
             <tspan id="gold" fill="rgb(205, 165, 0)">240</tspan>
           </text>
-          <text x="815" y="507" text-anchor="left" font-size="24" font-family="Helvetica">Lives:
+          <text x="815" y="507" text-anchor="left" font-size="24" font-family="Fondamento">Lives:
             <tspan id="lives" fill="rgb(150, 0, 0)">20</tspan>
           </text>
 
@@ -182,9 +199,9 @@
 
         <g id="game_over_group" opacity="0.9" visibility="hidden">
             <rect id="game_over_rect" x="0" y="0" height="520" width="1010" fill="rgb(80, 80, 80)"></rect>
-            <text x="400" y="212" text-anchor="middle" font-size="72" font-family="Helvetica" font-weight="bold" fill="red" stroke="black" stroke-width="1">GAME OVER</text>
+            <text x="400" y="212" text-anchor="middle" font-size="72" font-family="Fondamento" font-weight="bold" fill="red" stroke="black" stroke-width="1">GAME OVER</text>
             <rect id="play_again" x="325" y="250" height="40" width="150" fill="rgb(0, 155, 0)" class="button" stroke="black" stroke-width="1"></rect>
-            <text x="400" y="278" text-anchor="middle" font-size="24" font-family="Helvetica" font-weight="bold" fill="black" class="unclickable">Play again</text>
+            <text x="400" y="278" text-anchor="middle" font-size="24" font-family="Fondamento" font-weight="bold" fill="black" class="unclickable">Play again</text>
             <animate
               id="game_over_anim"
               attributeName="opacity"
@@ -196,6 +213,9 @@
           </g>
 
       </svg>
+    </div>
+    <div class="instructions">
+      <span>Space to spawn monsters, P to pause/unpause.</span>
     </div>
   </body>
 </html>

@@ -113,7 +113,6 @@ class Game {
   constructor() {
     this.$field = $("#field");
 
-    this.offset = $("#game").offset();
     this.grid = {
       increment: 40,
       height: 13,
@@ -240,6 +239,7 @@ class Game {
     selection.setAttribute("class", "button selection");
 
     let range = document.createElementNS(SVGNS, "circle");
+    range.setAttribute("id", "range");
     range.setAttribute("class", "range");
 
     $("#game").append(selection);
@@ -321,6 +321,19 @@ class Game {
         this.selectedTower.sell();
       }
     });
+
+    $(".priority").on("click", (e) => {
+      if (!this.selectedTower) {
+        return;
+      }
+      let newPriority = $(e.target).attr("id").replace(/priority_(\w+)_button/, "$1");
+      let oldPriority = this.selectedTower.priority;
+      if (newPriority === oldPriority) {
+        return;
+      }
+
+      this.selectedTower.setPriority(newPriority);
+    })
   }
 
   addKeyListeners() {
@@ -430,8 +443,16 @@ class Game {
   spawnWave(count = 10) {
     this.updateLevel(this.level + 1);
 
+    let randomRgbArr = [0, 0, 0];
+    for (let i = 0; i < randomRgbArr.length; i++) {
+      randomRgbArr[i] = Math.round(100 * Math.random());
+    }
+
+    let randomRgb = `rgb(${randomRgbArr.join(", ")})`;
+    // console.log(randomRgb);
+
     for(let i = 0; i < count; i++) {
-      new __WEBPACK_IMPORTED_MODULE_1__monster__["a" /* default */](this.level, i, this);
+      new __WEBPACK_IMPORTED_MODULE_1__monster__["a" /* default */](this.level, i, this, randomRgb);
     }
 
     this.liveMonster += count;
@@ -492,7 +513,17 @@ class Game {
   }
 
   clickBuy(e) {
-    this.buy(e.target);
+    let svg = e.target;
+    let id = $(svg).attr("id");
+    let type = id.slice(id.indexOf("_") + 1, id.length);
+
+    if (this.building) {
+      if (this.buildingType === type) {
+        this.clearSelection();
+        return;
+      }
+    }
+    this.buy(svg);
   }
 
   buy(svg) {
@@ -520,7 +551,10 @@ class Game {
     if ((this.building) && (keepCursorOn == undefined)) {
       this.building = false;
       $(`#buy_${this.buildingType}`).attr("class", `button buy ${this.buildingType}`);
+      $("#selection").attr("visibility", "hidden");
     }
+
+    $("#range").attr("visibility", "hidden");
   }
 
 
@@ -688,6 +722,8 @@ class Game {
     // range.attr("fill", tower.color)
     range.attr("r", tower.range);
     range.attr("visibility", "visible");
+
+    $("#game").append(range);
   }
 
   getGridCoordinates(e) {
@@ -696,8 +732,9 @@ class Game {
     let width = this.grid.width;
     let height = this.grid.height;
 
-    let x = Math.floor((e.clientX - this.offset.left) / increment);
-    let y = Math.floor((e.clientY - this.offset.top) / increment);
+    let offset = $("#game").offset();
+    let x = Math.floor((e.clientX - offset.left) / increment);
+    let y = Math.floor((e.clientY - offset.top) / increment);
 
     if (x >= width) {
       x = width - 1;
@@ -745,8 +782,10 @@ class Game {
       let tower = TOWERS[towerKey];
       if (tower.price > this.gold) {
         $(`#buy_${towerKey}`).attr("opacity", "0.3");
+        $(`#buy_${towerKey}_tower`).attr("opacity", "0.3");
       } else {
         $(`#buy_${towerKey}`).attr("opacity", "1");
+        $(`#buy_${towerKey}_tower`).attr("opacity", "1");
       }
     }
 
@@ -1074,9 +1113,9 @@ class Bullet {
           }
 
           let r = this.game.getDistance(monster.x, monster.y, target.x, target.y);
-          console.log(r);
+
           if (r <= this.tower.splash[this.tower.level][1]) {
-            this.onHit(true, damage * this.tower.splash[this.tower.level][0], monster);
+            this.onHit(true, Math.round(damage * this.tower.splash[this.tower.level][0]), monster);
           }
         }
       }
@@ -1108,13 +1147,13 @@ $(document).ready(() => {
 const SVGNS = "http://www.w3.org/2000/svg";
 const XLINK_URL = "http://www.w3.org/1999/xlink";
 
-const BASE_HP = 100;
-const HP_INCREASE_RATIO = 1.25;
+const BASE_HP = 130;
+const HP_INCREASE_RATIO = 1.3;
 const BASE_BOUNTY = 10;
-const BOUNTY_INCREASE_RATIO = 1.15;
+const BOUNTY_INCREASE_RATIO = 1.1;
 
 class Monster {
-  constructor(level, index, game) {
+  constructor(level, index, game, color="#990000") {
     this.game = game;
 
     let svg = document.createElementNS(SVGNS, "use");
@@ -1132,6 +1171,8 @@ class Monster {
 
     $("#game").append(svg);
     this.svg = svg;
+    svg.setAttribute("fill", color);
+    svg.setAttribute("stroke", color);
 
     this.maxHp = Math.round(BASE_HP * (HP_INCREASE_RATIO ** (level - 1)));
     this.hp = this.maxHp;
@@ -1166,7 +1207,7 @@ class Monster {
       this.game.clearSelection();
       this.game.selectedMonster = this;
       this.selected = true;
-      
+
       $(this.svg).attr("class", "selected-monster");
       let temp = this.svg.parentNode;
       temp.removeChild(this.svg);
@@ -1265,10 +1306,11 @@ class Tower {
     switch (type) {
       case "arrow":
         this.name = "Arrow";
-        this.damage = [30, 60, 120, 240, 480];
+        this.damage = [20, 40, 80, 160, 320];
         this.range = [140, 160, 180, 200, 220];
         this.price = [60, 60, 120, 240, 480];
         this.interval = [25, 23, 21, 19, 17];
+        this.priority = "first";
         this.findTarget = () => (this.findFirstTarget());
         this.shootAnimation = () => (this.shootBowAnimation());
 
@@ -1303,6 +1345,7 @@ class Tower {
         this.interval = [40, 37, 34, 31, 28];
         this.slow = [[0.5, 100], [0.59, 120], [0.68, 140], [0.77, 160], [0.86, 200]]; // amount, duration
         this.special = "slow";
+        this.priority = "strongest";
         this.findTarget = () => (this.findStrongestTarget());
         this.shootAnimation = () => (this.shootIceAnimation());
 
@@ -1347,9 +1390,10 @@ class Tower {
         this.damage = [150, 250, 400, 800, 1600];
         this.range = [100, 120, 140, 160, 180];
         this.price = [100, 100, 200, 400, 800];
-        this.interval = [115, 110, 105, 100, 95];
+        this.interval = [85, 80, 75, 70, 65];
         this.splash = [[0.4, 50], [0.45, 55], [0.5, 60], [0.55, 65], [0.6, 70]]; // amount, radius
         this.special = "splash";
+        this.priority = "closest";
         this.findTarget = () => (this.findClosestTarget());
         this.shootAnimation = () => (this.shootCannonAnimation());
 
@@ -1392,9 +1436,26 @@ class Tower {
     this.svg = svg;
     this.towerSvg = towerSvg;
 
+    this.setPriority(this.priority, true);
+
     $(this.svg).on("click", (e) => {
       this.handleClick(e);
     })
+  }
+
+  setPriority(newPriority, initial = false) {
+    let priorities = ["closest", "farthest", "first", "last", "strongest", "weakest"];
+    for (let i = 0; i < priorities.length; i++) {
+      if (priorities[i] === newPriority) {
+        $(`#priority_${priorities[i]}_button`).attr("class", "priority selected-priority");
+      } else {
+        $(`#priority_${priorities[i]}_button`).attr("class", "button priority");
+      }
+    }
+
+    this.priority = newPriority;
+    let functionName = "find" + newPriority.charAt(0).toUpperCase() + newPriority.slice(1) + "Target";
+    this.findTarget = () => (this[functionName]() );
   }
 
   handleClick(e) {
@@ -1409,9 +1470,7 @@ class Tower {
     //   //$(selectedPriority).attr("fill","rgb(70, 119, 187)");
     //   $(selectedPriority).attr("fill","rgb(120, 169, 237)");
     // }
-    // let id = "priority_" + this.priority + "_button";
-    // selectedPriority = document.getElementById(id);
-    // $(selectedPriority).attr("fill","rgb(70, 119, 187)");
+    this.setPriority(this.priority, true);
 
     this.showRange();
     this.refreshTowerDetails();
@@ -1424,6 +1483,8 @@ class Tower {
     range.attr("cy", this.cy)
     range.attr("r", this.range[this.level]);;
     range.attr("visibility", "visible")
+
+    $("#game").append(range);
   }
 
   refreshTowerDetails() {
@@ -1645,7 +1706,7 @@ class Tower {
       }
 
       let r = this.game.getDistance(this.cx, this.cy, p.x, p.y);
-      if ((r < farthestVal) && (r - 10 <= this.range[this.level])) {
+      if ((r > farthestVal) && (r - 10 <= this.range[this.level])) {
         farthestVal = r;
         index = i;
       }
