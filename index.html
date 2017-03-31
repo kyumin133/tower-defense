@@ -61,16 +61,18 @@
   <!--          <circle r="0.5" cx="0" cy="0" fill="white"></circle>-->
           </g>
 
-          <rect id="arrow_frame" height="39" width="39" x="-20" y="-20" class="arrow" />
+
+          <rect id="arrow_frame" height="39" width="39" x="-20" y="-20" class="arrow" rx="5" ry="5"/>
+
           <g id="arrow_tower" fill="transparent" stroke="black" stroke-width="1" class="bow">
             <path d="M -2 -12 C -2 -12, 16 0, -2 12" stroke-width="1.5" stroke="#b69b4c"/>
           </g>
 
-          <rect id="ice_frame" height="39" width="39" x="-20" y="-20" class="ice"/>
+          <rect id="ice_frame" height="39" width="39" x="-20" y="-20" class="ice" rx="5" ry="5"/>
 
           <g id="ice_tower" fill="transparent" stroke="black" stroke-width="1" class="bow"></g>
 
-          <rect id="cannon_frame" height="39" width="39" x="-20" y="-20" class="cannon" />
+          <rect id="cannon_frame" height="39" width="39" x="-20" y="-20" class="cannon" rx="5" ry="5"/>
 
           <g id="cannon_tower" fill="transparent" stroke="black" stroke-width="1" class="bow">
           </g>
@@ -109,7 +111,7 @@
         <g id="shop_group">
           <text x="900" y="36" text-anchor="middle" font-size="24" font-family="Fondamento">Shop</text>
           <text x="815" y="59" text-anchor="left" font-size="16" font-family="Fondamento">Towers</text>
-          <rect id="buy_arrow" x="815" y="69" class="button buy arrow">
+          <rect id="buy_arrow" x="815" y="69" class="button buy arrow" >
           </rect>
           <g id="buy_arrow_tower" class="graphic">
             <use xlink:href="#arrow_tower" x="835" y="89" />

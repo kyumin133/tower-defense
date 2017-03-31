@@ -90,6 +90,8 @@ span {
   stroke-width: 1;
   height: 40px;
   width: 40px;
+  rx: 5px;
+  ry: 5px;
 }
 
 .buy:hover {
@@ -139,6 +141,8 @@ span {
 .selection {
   height: 40px;
   width: 40px;
+  rx: 5px;
+  ry: 5px;
   /*fill: white;*/
   opacity: 0.7;
   /*stroke: black;
@@ -302,4 +306,12 @@ span {
 
 .graphic {
   pointer-events: none;
+}
+
+.level-unlit {
+  fill: rgb(150, 150, 150);
+}
+
+.level-lit {
+  fill: #b69b4c;
 }
